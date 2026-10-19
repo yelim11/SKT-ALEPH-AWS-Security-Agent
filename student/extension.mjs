@@ -516,7 +516,7 @@ export function createStudentView() {
           ON_AI_MODEL_LIST_EMPTY: '현재 권한으로 이용할 수 있는 AI 모델이 없습니다. 담당자에게 모델 허용 설정을 확인하세요.',
           ON_AI_INVALID_INPUT: 'AI 점검 입력을 확인할 수 없습니다. 담당자에게 문의하세요.',
           ON_AI_INVALID_OUTPUT: 'AI 응답을 확인할 수 없습니다. 담당자에게 문의하세요.',
-          AI_REQUEST_UNVERIFIED: 'AI 연결 또는 응답을 확인할 수 없습니다. 담당자에게 확인하세요.',
+          AI_REQUEST_UNVERIFIED: 'AI 연결 또는 응답의 원인을 확인할 수 없습니다. 네트워크 등 일시적 요청 문제일 수도 있으므로 연결 상태를 확인하고 잠시 뒤 현재 API 연결 점검 버튼을 직접 눌러 재점검하세요. 문제가 계속되면 담당자에게 계정과 앱 권한을 확인하세요. 네트워크 장애로 확정된 것은 아닙니다.',
         };
         const code = typeof error?.code === 'string' && Object.hasOwn(categories, error.code)
           ? error.code : 'AI_REQUEST_UNVERIFIED';
@@ -596,6 +596,7 @@ export function createStudentView() {
           ? message : '오류 내용을 안전하게 확인할 수 없습니다.';
         addText(`사건 ${event.id} · AI 설명 실패: ${codeLabels[code]}(${code})`);
         addText(`오류 안내: ${safeMessage}`);
+        if (code === 'AI_REQUEST_UNVERIFIED') addText('네트워크 등 일시적인 연결 문제일 수도 있지만 원인은 확인되지 않았습니다. 필요하면 연결 상태를 확인하고 잠시 뒤 사용자가 직접 AI 설명을 다시 요청하세요. 자동 재요청하지 않습니다.');
         addText('기존 보안 기록은 그대로 유지됩니다. 실패는 사건 설명 성공이 아닙니다.');
         return root;
       }
