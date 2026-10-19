@@ -56,8 +56,8 @@ export function createStudentView() {
         const { user, device, session } = me.data || {};
         if (user && device && session) {
           addText(identitySection, `사용자: ${user.label || user.id} (ID: ${user.id})`);
-          addText(identitySection, `현재 기기: ${device.label || device.id} (ID: ${device.id}) · ${deviceLabels[device.status] || '확인 불가'}`);
-          addText(identitySection, `로그인 세션: ${session.id} · ${sessionLabels[session.status] || '확인 불가'}`);
+          addText(identitySection, `현재 기기: ${device.label || device.id} (ID: ${device.id}) · ${deviceLabels[device.status] || '확인 불가'} (${device.status})`);
+          addText(identitySection, `로그인 세션: ${session.id} · ${sessionLabels[session.status] || '확인 불가'} (${session.status})`);
         } else {
           addText(identitySection, '사용자·기기·세션 정보를 확인할 수 없습니다.');
         }
@@ -73,7 +73,7 @@ export function createStudentView() {
           const list = document.createElement('ul');
           for (const device of devices.data) {
             const item = document.createElement('li');
-            item.textContent = `${device.label || device.id} (ID: ${device.id}) · ${deviceLabels[device.status] || '확인 불가'}`;
+            item.textContent = `${device.label || device.id} (ID: ${device.id}) · ${deviceLabels[device.status] || '확인 불가'} (${device.status})`;
             list.appendChild(item);
           }
           devicesSection.appendChild(list);
@@ -90,7 +90,7 @@ export function createStudentView() {
           const list = document.createElement('ul');
           for (const session of sessions.data) {
             const item = document.createElement('li');
-            item.textContent = `${session.id} · ${sessionLabels[session.status] || '확인 불가'}`;
+            item.textContent = `${session.id} · ${sessionLabels[session.status] || '확인 불가'} (${session.status})`;
             list.appendChild(item);
           }
           sessionsSection.appendChild(list);
