@@ -768,8 +768,10 @@ export function createStudentView() {
       const version = Number.isSafeInteger(receipt?.version) ? receipt.version : null;
 
       const receiptMatchesCurrent = !receipt || (
-        (!present(receipt.eventId) || receipt.eventId === eventId)
-        && (!present(receipt.actionId) || receipt.actionId === currentAction)
+        present(receipt.eventId)
+        && present(receipt.actionId)
+        && receipt.eventId === eventId
+        && receipt.actionId === currentAction
       );
 
       const showBinding = () => {
