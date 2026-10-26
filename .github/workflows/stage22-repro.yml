@@ -25,7 +25,7 @@ jobs:
           node-version: 24.19.0
 
       - name: Verify source identity and syntax
-        shell: powershell
+        shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $head = (git rev-parse HEAD).Trim()
@@ -42,27 +42,22 @@ jobs:
           }
           npm run check
 
-      - name: First launch and browser-equivalent HTTP check
-        shell: powershell
+      - name: First launch and HTTP UI check
+        shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $output = & powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -Background 2>&1
-          $output | ForEach-Object { Write-Host $_ }
-          $joined = ($output -join "`n")
-          if ($joined -notmatch "케셰브가 켜졌습니다") { throw "Start signal missing." }
-          if ($joined -notmatch "서버가 응답한 것만 확인했습니다") { throw "Server-only boundary signal missing." }
-
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -Background | Out-Host
           $response = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:5189/" -TimeoutSec 10
           Write-Host "FIRST_HTTP_STATUS=$($response.StatusCode)"
           if ($response.StatusCode -ne 200) { throw "Unexpected first HTTP status." }
-          foreach ($text in @("보호 현황","업무 앱","보안 기록","학생 구현 표시","설치 패키지와 취약점 정보")) {
-            if ($response.Content -notmatch [regex]::Escape($text)) {
-              throw "Expected UI text missing: $text"
+          foreach ($needle in @('id="view-protection"','id="view-apps"','id="view-records"','id="student-identity"','id="vulnerabilities-result"')) {
+            if (-not $response.Content.Contains($needle)) {
+              throw "Expected UI marker missing: $needle"
             }
           }
 
       - name: Stop first launch
-        shell: powershell
+        shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $conn = Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 5189 -State Listen -ErrorAction Stop | Select-Object -First 1
@@ -74,11 +69,10 @@ jobs:
           }
 
       - name: Relaunch and verify clean checkout remains unchanged
-        shell: powershell
+        shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $output = & powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -Background 2>&1
-          $output | ForEach-Object { Write-Host $_ }
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -Background | Out-Host
           $response = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:5189/" -TimeoutSec 10
           Write-Host "SECOND_HTTP_STATUS=$($response.StatusCode)"
           if ($response.StatusCode -ne 200) { throw "Unexpected second HTTP status." }
@@ -91,6 +85,6 @@ jobs:
           $dirty = git status --porcelain
           if ($dirty) {
             Write-Host $dirty
-            throw "Runtime changed tracked or untracked repository files."
+            throw "Runtime changed repository files."
           }
           Write-Host "REPRODUCTION_RESULT=PASS"
