@@ -23,7 +23,7 @@
 | 대체 실행 명령 | npm start → node src/server.mjs | 원문 확인 |
 | 데모 | npm run demo → 예제 자료. 실제 연결 성공이 아님 | 원문 확인 |
 | 학생 파일 문법 확인 | npm run check → node --check student/extension.mjs | 원문 확인 |
-| 이 대화에서 새 PowerShell 창으로 실제 재실행 | 실행하지 않음 | **미확인** |
+| clean Windows 새 환경 기본 실행 | GitHub-hosted Windows Server 2025에서 a509c066… checkout·기동·종료·재실행 확인 | **실제 실행 확인** |
 
 이 저장소 루트에는 현재 package-lock.json이 없습니다. 20단계 취약점 스캐너는 이 앱 자체의 lock을 자동으로 가정하지 않고, 담당자가 ON_PROJECT_DIRECTORY로 지정한 **검사 대상 프로젝트**의 package-lock.json과 설치된 node_modules/*/package.json을 대조합니다.
 
@@ -262,7 +262,7 @@ flowchart LR
 - 실제 보안 조치가 원천 시스템에 적용된 결과
 - 실제 검사 대상 프로젝트의 package-lock.json / node_modules와 화면 버전의 직접 대조
 - 실제 OSV 인터넷 조회 결과
-- 새 환경에서 전체 기능을 처음부터 재현하는 22단계 인수 시험
+- GitHub-hosted Windows clean runner의 기본 기동·종료·재실행은 확인했지만, 실제 SDP·AI·조치·OSV 운영 연결을 포함한 전체 인수 시험
 
 위 항목은 **미확인**이며, 코드나 모의 입력 결과만으로 실제 성공이라고 쓰지 않습니다.
 
@@ -303,5 +303,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1
 
 ## 15. 22단계 재현 기록
 
-22단계의 같은 커밋 재현 시도, 13~21 누적 확인표, 데이터 보존/복원 계획과 최종 지원 범위는 [STUDENT_FINAL_HANDOFF.md](STUDENT_FINAL_HANDOFF.md)에 이어서 기록합니다. 현재 새 Windows clean clone 실행 결과는 미확인 상태이며, 원문 검토나 모의 입력 결과를 실제 새 환경 실행 성공으로 바꾸어 적지 않습니다.
+22단계의 같은 커밋 재현 시도, 13~21 누적 확인표, 데이터 보존/복원 계획과 최종 지원 범위는 [STUDENT_FINAL_HANDOFF.md](STUDENT_FINAL_HANDOFF.md)에 이어서 기록합니다. GitHub-hosted Windows Server 2025 clean runner에서 `a509c06619560e0bfa155758605764e07f8bb911`의 기본 기동·종료·재실행을 실제 확인했으며, 실제 SDP·AI·조치·OSV 운영 연결은 별도 미확인으로 남깁니다.
 

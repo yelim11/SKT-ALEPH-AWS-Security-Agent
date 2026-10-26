@@ -38,5 +38,5 @@ ALEPH에서 정한 이 학생 Agent의 이름은 **노예**입니다. 제공 UI�
 
 22단계의 재현 대상, 누적 기능, 데이터 보존 계획, 실제 실행/미확인 구분은 [docs/STUDENT_FINAL_HANDOFF.md](docs/STUDENT_FINAL_HANDOFF.md)에 기록했습니다. 기계적으로 확인할 수 있는 버전·재현 상태 요약은 [docs/STUDENT_RELEASE_RECORD.json](docs/STUDENT_RELEASE_RECORD.json)에 있습니다.
 
-현재 릴리스 상태는 **검증 중**입니다. 이 문서 작성 환경에서는 GitHub DNS 제한으로 새 폴더 git clone이 실패했기 때문에, 새 Windows 폴더에서의 실제 clone·실행·종료·재실행은 아직 성공으로 기록하지 않았습니다. 22단계 원문 검토를 실제 운영 인증이나 자동 v1.0 인증으로 표현하지 않습니다.
+현재 릴리스 상태는 **수업용 clean-environment 재현 확인 / 운영 통합 미검증**입니다. 최초 격리 Linux 환경의 clone은 DNS 제한으로 실패했지만, 이후 GitHub-hosted Windows Server 2025 clean runner에서 정확히 `a509c06619560e0bfa155758605764e07f8bb911`을 checkout하여 Node `v24.19.0`, `npm run check`, 첫 HTTP 200, 종료, 재실행 HTTP 200, 실행 후 Git 상태 청결까지 실제 확인했습니다. 이 결과는 기본 실행 재현 증거이며 실제 SDP·유료 AI·보안 조치·OSV 운영 연결 인증은 아닙니다.
 

@@ -10,14 +10,15 @@
 | 저장소 | https://github.com/yelim11/SKT-ALEPH-AWS-Security-Agent |
 | 브랜치 | main |
 | 21단계 통과 시점 기준 커밋 | 4b543b829f9a4e41f2da20305dcba9138e4faae3 |
+| Windows clean 재현 대상 커밋 | a509c06619560e0bfa155758605764e07f8bb911 |
 | 시작 틀/앱 버전 | package.json 기준 0.2.11 |
 | Node.js 기준 | package.json 기준 24.19.0 |
-| 22단계 릴리스 상태 | **검증 중(verification in progress)** |
+| 22단계 릴리스 상태 | **clean-environment 재현 확인 / 운영 통합 미검증** |
 | 운영 v1.0 인증 | **아님** |
 
-21단계 과제 화면에서 “21단계 통과”가 표시된 것은 사용자에게 확인된 사실입니다. 이 문서는 그 커밋을 기준으로 22단계 재현을 시작합니다.
+21단계 과제 화면에서 “21단계 통과”가 표시된 것은 사용자에게 확인된 사실입니다. 21단계 통과 뒤 22단계 초안 문서만 추가한 `a509c06619560e0bfa155758605764e07f8bb911`을 깨끗한 Windows 환경의 실제 재현 대상으로 고정했습니다.
 
-22단계 문서를 추가하면 Git 커밋 번호 자체는 바뀝니다. Git 커밋은 자기 자신의 해시를 파일 내용에 미리 포함할 수 없으므로, 이 문서에는 **재현을 시작한 런타임 소스 커밋**을 기록합니다. 22단계 증거 문서 커밋에서는 runtime 파일을 바꾸지 않고 README/docs만 추가·수정합니다. 제출할 40자리 SHA는 과제 화면에 입력하는 실제 HEAD를 기준으로 다시 확인합니다.
+Git 커밋은 자기 자신의 해시를 파일 내용에 미리 포함할 수 없으므로, 재현 결과를 문서에 반영하는 최종 제출 커밋은 재현 대상 커밋의 문서 전용 자식 커밋이 됩니다. 이 문서 갱신에서 `student/`, `src/`, `public/`, `package.json`, 실행 스크립트는 바꾸지 않습니다. 제출 전에는 현재 HEAD의 40자리 SHA를 별도로 확인합니다.
 
 ## 2. 원래 작업 보존
 
@@ -46,7 +47,7 @@
 원래 작업과 분리된 임시 폴더를 대상으로 다음 명령을 실제로 시도했습니다.
 
 ~~~text
-git clone https://github.com/yelim11/SKT-ALEPH-AWS-Security-Agent.git /tmp/alekov-stage22
+git clone https://github.com/yelim11/SKT-ALEPH-AWS-Security-Agent.git /tmp/alekov-stage22-repro
 ~~~
 
 결과:
@@ -60,14 +61,36 @@ Could not resolve host: github.com
 
 GitHub 연결 도구를 통한 원문 읽기에서는 4b543b829f9a4e41f2da20305dcba9138e4faae3의 저장소·Git 이력·파일 내용을 확인했습니다. 이것은 **새 환경 실행 성공 증거가 아닙니다**.
 
-### 3.2 Windows 학생 PC에서 수행할 clean clone 절차
+### 3.2 GitHub-hosted Windows clean runner 실제 재현
+
+2026-10-26에 GitHub Actions의 새 `windows-latest` 러너(Windows Server 2025)에서 **정확히 `a509c06619560e0bfa155758605764e07f8bb911`을 checkout**해 실제 실행했습니다.
+
+- 실행 기록: https://github.com/yelim11/SKT-ALEPH-AWS-Security-Agent/actions/runs/40292831748
+- 실행 결과: `success`
+- 확인 커밋: `a509c06619560e0bfa155758605764e07f8bb911`
+- Node.js: `v24.19.0`
+- npm: `11.17.0`
+- `npm run check`: PASS (`node --check student/extension.mjs`)
+- 첫 실행: `http://127.0.0.1:5189/` → HTTP 200
+- 첫 실행 화면: 보호 현황·업무 앱·보안 기록·학생 표시·취약점 영역의 DOM 식별자를 확인
+- 첫 서버 종료 후 포트 5189 해제 확인
+- 같은 clean checkout에서 재실행 → HTTP 200
+- 두 번째 서버 종료 후 저장소 `git status --porcelain` 출력 없음
+- 최종 로그: `REPRODUCTION_RESULT=PASS`
+- 완료 시각: `2026-10-26T08:32:53Z` (`2026-10-26T17:32:53+09:00`)
+
+이 결과는 **새 Windows 환경에서 기본 실행 진입점과 화면 제공, 종료·재실행, 저장소 비변조를 실제 확인한 증거**입니다. 실제 SDP 계정·AI 유료 모델·19단계 원천 조치·20단계 외부 OSV 운영 연결까지 성공했다는 뜻은 아닙니다.
+
+첫 번째 검증 워크플로는 테스트 셸의 한글 인코딩 문제로 실패했으며 앱 코드 실패가 아니었습니다. 검증 스크립트를 ASCII 기준으로 고친 뒤 동일 재현 대상 커밋으로 위 성공 결과를 얻었습니다.
+
+### 3.3 Windows 학생 PC에서 수행할 clean clone 절차
 
 기존 작업 폴더를 그대로 두고, 기존 폴더의 하위가 아닌 새 빈 부모 폴더에서 PowerShell을 엽니다. 예시 폴더 이름은 자유롭게 바꿀 수 있습니다.
 
 ~~~powershell
 git clone https://github.com/yelim11/SKT-ALEPH-AWS-Security-Agent.git .\alekov-stage22-repro
 Set-Location .\alekov-stage22-repro
-git checkout --detach 4b543b829f9a4e41f2da20305dcba9138e4faae3
+git checkout --detach a509c06619560e0bfa155758605764e07f8bb911
 git rev-parse HEAD
 git status --short
 node --version
@@ -76,7 +99,7 @@ npm run check
 
 기대 확인값:
 
-- git rev-parse HEAD: 4b543b829f9a4e41f2da20305dcba9138e4faae3
+- git rev-parse HEAD: a509c06619560e0bfa155758605764e07f8bb911
 - git status --short: 출력 없음
 - Node.js 수업 기준: v24.19.0
 - npm run check: student/extension.mjs 문법 오류 없이 종료
@@ -98,7 +121,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1
 
 종료는 실행 PowerShell에서 Ctrl+C입니다. 종료 후 같은 명령으로 한 번 더 실행해 재실행 여부를 확인합니다.
 
-**이 문서 작성 시점에는 위 Windows clean clone 실행 결과를 받지 못했으므로 상태는 미확인입니다.**
+GitHub-hosted Windows clean runner에서는 위 기본 실행 절차를 실제로 재현했습니다. 학생 개인 PC에서의 수동 clean clone은 별도 미확인으로 남깁니다.
 
 ## 4. 설치와 이동 가능한 구성
 
@@ -140,7 +163,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1
 | 18 | 근거 있는 AI 설명 | 원문+모의 확인 | renderExplanation, 커밋 fd3012… | 실제 유료 AI 사건 설명 |
 | 19 | 조치 상태/효과 구분 | 원문+모의 확인 | renderAction, 커밋 0024ba… | 실제 원천 조치 집행은 현재 미준비 |
 | 20 | 정확한 패키지/OSV | 원문+모의 확인 | renderVulnerabilities, 커밋 7782cd… | 실제 대상 project lock/node_modules와 OSV 인터넷 조회 |
-| 21 | 실행 설명서/구성도 | **ALEPH 화면에서 통과 확인** | README + docs/STUDENT_RUNBOOK.md, 커밋 4b543b… | 별도 새 PC에서 설명서 재현은 22에서 미확인 |
+| 21 | 실행 설명서/구성도 | **ALEPH 화면에서 통과 확인 + clean Windows 기본 실행 재현** | README + docs/STUDENT_RUNBOOK.md, 커밋 4b543b… / Windows 재현 대상 a509c0… | 실제 SDP·AI·조치·OSV 운영 연결은 별도 미확인 |
 
 ### demo와 실제 연결 구분
 
@@ -214,43 +237,52 @@ clean clone에서 문제가 발견되면:
 
 ## 8. 릴리스 상태
 
-현재 상태는 **검증 중**입니다.
+현재 상태는 **수업용 clean-environment 재현 확인 / 운영 통합 미검증**입니다.
 
-완료된 근거:
+실제 완료된 근거:
 
 - 13~20 학생 구현이 현재 누적 source에 존재
 - 21단계 학생 문서와 구성도가 현재 source와 일치하도록 작성됨
 - 사용자 제공 ALEPH 화면에서 21단계 통과 확인
-- GitHub에서 재현 기준 커밋의 원문과 이력을 확인
-- 원래 개발 Git 이력을 삭제하거나 덮어쓰지 않음
+- GitHub-hosted Windows Server 2025 clean runner에서 `a509c06619560e0bfa155758605764e07f8bb911` checkout 성공
+- Node.js `v24.19.0`, `npm run check` 성공
+- 첫 실행 HTTP 200 및 핵심 UI DOM 확인
+- 첫 실행 종료 후 포트 해제 확인
+- 동일 clean checkout 재실행 HTTP 200
+- 재실행 종료 뒤 Git working tree clean 확인
+- 원래 개발 Git 이력과 런타임 source를 삭제하거나 덮어쓰지 않음
 
 미완료/미확인:
 
-- Windows 새 빈 폴더에서 같은 최종 커밋 clone 성공
-- 그 clone의 Node 24.19.0 / npm run check 실제 결과
-- 실제 브라우저 기동 → 종료 → 재실행 결과
-- 실제 학생 SDP 연결
-- 실제 학생 AI 유료 모델 추론
+- 학생 개인 Windows PC에서의 별도 수동 clean clone
+- 실제 학생 SDP 운영 연결
+- 실제 학생 AI 앱 승인과 유료 모델 추론
 - 실제 19단계 원천 조치 집행
-- 실제 대상 프로젝트의 OSV 조회
+- 실제 대상 프로젝트의 OSV 외부 조회와 package-lock/node_modules 직접 대조
+- 운영 자격/외부 DB의 실제 복원 시험
 
-따라서 22단계 문서 검토를 운영 인증, 실제 집행 인증, 또는 자동 v1.0 인증으로 표현하지 않습니다.
+따라서 22단계 문서 검토와 clean runner 성공을 운영 인증, 실제 집행 인증, 또는 자동 v1.0 인증으로 표현하지 않습니다.
 
-## 9. 제출 전 학생이 채울 실제 재현 결과
-
-Windows 새 환경 확인 후 아래 값을 사실대로 갱신합니다.
+## 9. 실제 재현 결과
 
 | 항목 | 기록 |
 |---|---|
-| 재현 폴더 | 미확인 |
-| git rev-parse HEAD | 미확인 |
-| git status --short | 미확인 |
-| node --version | 미확인 |
-| npm run check | 미확인 |
-| 첫 실행 HTTP/브라우저 | 미확인 |
-| Ctrl+C 종료 | 미확인 |
-| 재실행 | 미확인 |
-| 확인 시각 | 미확인 |
-| 기존 작업 폴더 보존 | GitHub 이력 보존 확인 / 학생 PC 폴더 직접 확인 미완료 |
+| 재현 환경 | GitHub-hosted Windows Server 2025 clean runner |
+| 재현 대상 커밋 | a509c06619560e0bfa155758605764e07f8bb911 |
+| git rev-parse HEAD | a509c06619560e0bfa155758605764e07f8bb911 |
+| git status --short | 실행 전/후 출력 없음 |
+| node --version | v24.19.0 |
+| npm --version | 11.17.0 |
+| npm run check | PASS |
+| 첫 실행 HTTP/화면 | HTTP 200 + 핵심 UI DOM 식별자 확인 |
+| 첫 실행 종료 | 서버 프로세스 종료 + 포트 5189 해제 확인 |
+| 재실행 | HTTP 200 |
+| 재실행 종료 | 서버 프로세스 종료 |
+| 최종 결과 | REPRODUCTION_RESULT=PASS |
+| 확인 시각 | 2026-10-26T08:32:53Z / 2026-10-26T17:32:53+09:00 |
+| 실행 기록 | https://github.com/yelim11/SKT-ALEPH-AWS-Security-Agent/actions/runs/40292831748 |
+| 학생 개인 PC 직접 재현 | 미확인 |
+| 운영 시스템 연결 | 미확인 |
 
-이 표가 실제 결과로 바뀌기 전까지 clean_environment와 release_reproduction의 **실제 실행 증거는 미확인**으로 남깁니다.
+이 표의 PASS는 **기본 로컬 앱의 clean Windows 실행·종료·재실행과 source 비변조**를 뜻합니다. 실제 SDP·AI·조치·OSV 운영 연동 성공을 뜻하지 않습니다.
+
