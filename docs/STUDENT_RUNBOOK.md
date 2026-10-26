@@ -300,3 +300,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1
 - 도구 명령은 과제 화면이 제공한 실제 경로와 제출할 커밋을 확인한 뒤 사용합니다.
 - 원문 전달 성공은 AI 검토 통과와 같은 뜻이 아닙니다.
 - 실제 유료 AI 요청, 보안 조치, 단계 제출은 이 문서 작성 과정에서 자동 실행하지 않습니다.
+
+## 15. 22단계 재현 기록
+
+22단계의 같은 커밋 재현 시도, 13~21 누적 확인표, 데이터 보존/복원 계획과 최종 지원 범위는 [STUDENT_FINAL_HANDOFF.md](STUDENT_FINAL_HANDOFF.md)에 이어서 기록합니다. 현재 새 Windows clean clone 실행 결과는 미확인 상태이며, 원문 검토나 모의 입력 결과를 실제 새 환경 실행 성공으로 바꾸어 적지 않습니다.
+
