@@ -915,6 +915,10 @@ export function createStudentView() {
         addText('이 준비 상태로는 더 이상 집행할 수 없습니다. 현재 사건과 대상을 다시 확인하고 제공 화면에서 조치를 다시 준비하세요.');
         if (present(confirmationExpiresAt)) addText(`지난 확인 기한(confirmationExpiresAt): ${confirmationExpiresAt}`);
         showBinding();
+        if (eventId && requestId) {
+          root.setAttribute('data-student-action-event', eventId);
+          root.setAttribute('data-student-action-request', requestId);
+        }
         return root;
       }
 
