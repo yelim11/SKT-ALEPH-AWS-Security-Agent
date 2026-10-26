@@ -737,6 +737,199 @@ export function createStudentView() {
 
       return root;
     },
-    renderAction() { return '학생 구현 대기: 현재 사건·조치·실제 대상·사람 확인·ACK와 원천 효과·unknown을 구분하세요.'; },
+    renderAction({ status, event, actionId, target, receipt, observation, message, confirmationExpiresAt, error }) {
+      // 매 호출마다 새 DOM을 만들어 새 사건·새 요청에서 이전 대상·영수증·결과가 남지 않게 한다.
+      const root = document.createElement('section');
+      const addText = (text, tag = 'p') => {
+        const element = document.createElement(tag);
+        element.textContent = text;
+        root.appendChild(element);
+        return element;
+      };
+      const containsSecret = /(?:bearer\s+\S+|sk-(?:proj-|ant-|svcacct-|on-)?[a-z0-9_-]{8,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:api[_ -]?key|authorization|password|비밀번호|토큰|confirmation(?:id|ticket)?)\s*[:=]\s*\S+)/i;
+      const safeText = (value, fallback = '확인할 수 없습니다.') =>
+        typeof value === 'string' && value.trim().length > 0 && value.length <= 500
+          && !containsSecret.test(value) && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value)
+          ? value : fallback;
+      const safeCode = (value) =>
+        typeof value === 'string' && /^[A-Za-z0-9._:-]{1,80}$/.test(value)
+          ? value : 'ACTION_RESULT_UNVERIFIED';
+      const present = (value) => value !== undefined && value !== null && value !== '';
+
+      const eventId = typeof event?.id === 'string' && event.id ? event.id : null;
+      const evidenceIds = Array.isArray(event?.evidence)
+        ? event.evidence.filter((row) => row && typeof row.id === 'string' && row.id).map((row) => row.id)
+        : [];
+      const currentAction = typeof actionId === 'string' && actionId ? actionId : null;
+      const targetId = typeof target?.id === 'string' && target.id ? target.id : null;
+      const targetGeneration = Number.isSafeInteger(target?.generation) ? target.generation : null;
+      const requestId = typeof receipt?.requestId === 'string' && receipt.requestId ? receipt.requestId : null;
+      const receiptId = typeof receipt?.receiptId === 'string' && receipt.receiptId ? receipt.receiptId : null;
+      const version = Number.isSafeInteger(receipt?.version) ? receipt.version : null;
+
+      const receiptMatchesCurrent = !receipt || (
+        (!present(receipt.eventId) || receipt.eventId === eventId)
+        && (!present(receipt.actionId) || receipt.actionId === currentAction)
+      );
+
+      const showBinding = () => {
+        if (eventId) addText(`사건 ID: ${eventId}`);
+        if (evidenceIds.length > 0) addText(`근거 ID: ${evidenceIds.join(', ')}`);
+        if (currentAction) addText(`조치 ID: ${currentAction}`);
+        if (targetId) addText(`실제 대상 ID: ${targetId}`);
+        if (targetGeneration !== null) addText(`대상 세대(generation): ${targetGeneration}`);
+        if (requestId) addText(`요청 ID(requestId): ${requestId}`);
+        if (receiptId) addText(`접수 ID(receiptId): ${receiptId}`);
+        if (version !== null) addText(`결과 버전(version): ${version}`);
+        if (receipt?.replayed === true) {
+          addText('같은 요청의 기존 접수 기록을 재사용했습니다(replayed: true). 새 조치가 다시 실행됐다는 뜻이 아닙니다.');
+        } else if (receipt?.replayed === false) {
+          addText('접수 재사용 여부(replayed): false');
+        }
+      };
+
+      // 제공 화면이 검증한 현재 사건/조치와 영수증이 어긋나면 성공·효과로 표시하지 않는다.
+      if (!receiptMatchesCurrent) {
+        addText('결과 불명(unknown)', 'h3');
+        addText('접수 정보가 현재 사건 또는 조치와 일치하지 않아 결과를 사용할 수 없습니다.');
+        showBinding();
+        addText('성공이나 효과 없음으로 판단하지 말고 제공 화면의 「연동 시스템 결과만 재조회」를 사용하세요.');
+        return root;
+      }
+
+      if (status === 'idle') {
+        addText('아직 미실행(idle)', 'h3');
+        if (eventId && Array.isArray(event?.supportedActions) && event.supportedActions.length === 0) {
+          addText('연동 시스템이 지원하는 조치가 없어 조치 준비 버튼이 나오지 않는 것이 정상입니다.');
+        } else {
+          addText('조치 제안은 아직 실행되지 않았습니다. 조치 준비와 집행은 제공 화면에서만 진행합니다.');
+        }
+        showBinding();
+        return root;
+      }
+
+      if (status === 'loading') {
+        addText('조치 준비 또는 결과 조회 중(loading)', 'h3');
+        addText(safeText(message, '현재 조치 상태를 확인하는 중입니다.'));
+        addText('아직 결과가 확인되지 않았습니다. 성공이나 완료로 판단하지 않습니다.');
+        showBinding();
+        return root;
+      }
+
+      if (status === 'prepared') {
+        addText('준비됨·미실행(prepared)', 'h3');
+        addText('실제 대상과 조치를 확인한 뒤 제공 화면의 사람 확인 절차를 거쳐야 합니다. 아직 서버에 집행된 상태가 아닙니다.');
+        showBinding();
+        addText(`사람 확인 기한(confirmationExpiresAt): ${present(confirmationExpiresAt) ? confirmationExpiresAt : '확인 불가'}`);
+        addText('확인 번호나 인증 티켓은 학생 화면에서 만들거나 저장하지 않습니다.');
+        if (eventId && requestId) {
+          root.setAttribute('data-student-action-event', eventId);
+          root.setAttribute('data-student-action-request', requestId);
+        }
+        return root;
+      }
+
+      if (status === 'executing') {
+        addText('서버에 전달 중(executing)', 'h3');
+        addText('사람 확인 뒤 조치 요청을 서버에 전달하고 있습니다. 결과가 아직 없으며 성공·완료 상태가 아닙니다.');
+        showBinding();
+        if (eventId && requestId) {
+          root.setAttribute('data-student-action-event', eventId);
+          root.setAttribute('data-student-action-request', requestId);
+        }
+        return root;
+      }
+
+      if (status === 'pending') {
+        addText('서버 접수·처리 중(pending)', 'h3');
+        addText('서버가 요청을 받았다는 접수 응답(ACK)만 확인된 상태입니다. ACK는 조치 효과나 실행 성공을 뜻하지 않습니다.');
+        showBinding();
+        if (eventId && requestId) {
+          root.setAttribute('data-student-action-event', eventId);
+          root.setAttribute('data-student-action-request', requestId);
+        }
+        return root;
+      }
+
+      if (status === 'succeeded') {
+        const effectConfirmed = observation?.effectApplied === true
+          && typeof observation?.observedAt === 'string' && observation.observedAt;
+        if (!effectConfirmed) {
+          addText('결과 불명(unknown)', 'h3');
+          addText('상태는 succeeded로 전달됐지만 연동 시스템의 실제 효과 관측(effectApplied: true)을 확인할 수 없습니다.');
+          showBinding();
+          addText('성공이나 효과 없음으로 단정하지 말고 제공 화면의 「연동 시스템 결과만 재조회」를 사용하세요.');
+          return root;
+        }
+        addText('효과 확인(succeeded)', 'h3');
+        addText(`관측 시각(observedAt): ${observation.observedAt}`);
+        addText('effectApplied: true');
+        showBinding();
+        if (receiptId) addText(`효과 확인 영수증(receiptId): ${receiptId}`);
+        if (eventId && requestId) {
+          root.setAttribute('data-student-action-event', eventId);
+          root.setAttribute('data-student-action-request', requestId);
+        }
+        return root;
+      }
+
+      if (status === 'denied') {
+        addText('연동 시스템 거절(denied)', 'h3');
+        addText(`안내: ${safeText(message, '연동 시스템이 조치 요청을 거절했습니다.')}`);
+        showBinding();
+        if (eventId && requestId) {
+          root.setAttribute('data-student-action-event', eventId);
+          root.setAttribute('data-student-action-request', requestId);
+        }
+        return root;
+      }
+
+      if (status === 'failed') {
+        addText('연동 시스템 처리 실패(failed)', 'h3');
+        addText(`안내: ${safeText(message, '연동 시스템에서 조치 처리에 실패했습니다.')}`);
+        showBinding();
+        if (eventId && requestId) {
+          root.setAttribute('data-student-action-event', eventId);
+          root.setAttribute('data-student-action-request', requestId);
+        }
+        return root;
+      }
+
+      if (status === 'unknown') {
+        addText('결과 불명(unknown)', 'h3');
+        addText(safeText(message, '조치 처리 결과를 확인할 수 없습니다.'));
+        if (receipt?.superseded === true) addText('이전 조회는 최신 결과를 대신하지 않습니다(superseded).');
+        showBinding();
+        addText('효과가 없다고도 성공했다고도 판단하지 마세요. 제공 화면의 「연동 시스템 결과만 재조회」로 결과만 다시 확인하세요.');
+        if (eventId && requestId) {
+          root.setAttribute('data-student-action-event', eventId);
+          root.setAttribute('data-student-action-request', requestId);
+        }
+        return root;
+      }
+
+      if (status === 'expired') {
+        addText('확인 기한 지남(expired)', 'h3');
+        addText('이 준비 상태로는 더 이상 집행할 수 없습니다. 현재 사건과 대상을 다시 확인하고 제공 화면에서 조치를 다시 준비하세요.');
+        if (present(confirmationExpiresAt)) addText(`지난 확인 기한(confirmationExpiresAt): ${confirmationExpiresAt}`);
+        showBinding();
+        return root;
+      }
+
+      if (status === 'error') {
+        addText('요청 처리 안 됨(error)', 'h3');
+        addText(`오류 코드: ${safeCode(error?.code)}`);
+        addText(`오류 안내: ${safeText(error?.message, '조치 요청을 처리할 수 없습니다.')}`);
+        showBinding();
+        addText('이 오류는 조치 성공이나 효과 없음의 확인이 아닙니다.');
+        return root;
+      }
+
+      addText('결과 불명(unknown)', 'h3');
+      addText(`알 수 없는 조치 상태: ${typeof status === 'string' ? status : '확인 불가'}`);
+      showBinding();
+      addText('성공이나 효과 없음으로 판단하지 말고 제공 화면의 결과 재조회를 사용하세요.');
+      return root;
+    },
   };
 }
