@@ -24,67 +24,90 @@ jobs:
         with:
           node-version: 24.19.0
 
-      - name: Verify source identity and syntax
+      - name: Reproduce exact source on clean Windows runner
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
+
           $head = (git rev-parse HEAD).Trim()
+          Write-Host "HEAD=$head"
           if ($head -ne "a509c06619560e0bfa155758605764e07f8bb911") {
             throw "HEAD mismatch: $head"
           }
-          if ((git status --porcelain).Length -ne 0) {
+
+          $dirtyBefore = git status --porcelain
+          if ($dirtyBefore) {
+            Write-Host $dirtyBefore
             throw "Checkout is not clean before run."
           }
+
           $node = (node --version).Trim()
+          $npm = (npm --version).Trim()
           Write-Host "NODE_VERSION=$node"
+          Write-Host "NPM_VERSION=$npm"
           if ($node -ne "v24.19.0") {
             throw "Node version mismatch: $node"
           }
-          npm run check
 
-      - name: First launch and HTTP UI check
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -Background | Out-Host
-          $response = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:5189/" -TimeoutSec 10
-          Write-Host "FIRST_HTTP_STATUS=$($response.StatusCode)"
-          if ($response.StatusCode -ne 200) { throw "Unexpected first HTTP status." }
-          foreach ($needle in @('id="view-protection"','id="view-apps"','id="view-records"','id="student-identity"','id="vulnerabilities-result"')) {
-            if (-not $response.Content.Contains($needle)) {
-              throw "Expected UI marker missing: $needle"
+          npm run check
+          if ($LASTEXITCODE -ne 0) {
+            throw "npm run check failed."
+          }
+
+          function Start-DocumentedApp {
+            $script = (Resolve-Path ".\tools\start-alekov.ps1").Path
+            $args = "-NoProfile -ExecutionPolicy Bypass -File `"$script`""
+            $launcher = Start-Process -FilePath "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -ArgumentList $args -PassThru
+            $deadline = (Get-Date).AddSeconds(30)
+            $response = $null
+            while ((Get-Date) -lt $deadline) {
+              try {
+                $response = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:5189/" -TimeoutSec 2
+                if ($response.StatusCode -eq 200) { break }
+              } catch {
+                Start-Sleep -Milliseconds 400
+              }
+            }
+            if ($null -eq $response -or $response.StatusCode -ne 200) {
+              if (-not $launcher.HasExited) { Stop-Process -Id $launcher.Id -Force -ErrorAction SilentlyContinue }
+              throw "Local app did not return HTTP 200."
+            }
+            return @{ Launcher = $launcher; Response = $response }
+          }
+
+          function Stop-DocumentedApp($launcher, [string]$label) {
+            $conn = Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 5189 -State Listen -ErrorAction Stop | Select-Object -First 1
+            Write-Host "$($label)_SERVER_PID=$($conn.OwningProcess)"
+            Stop-Process -Id $conn.OwningProcess -Force
+            Start-Sleep -Seconds 1
+            if (-not $launcher.HasExited) {
+              $launcher.WaitForExit(5000) | Out-Null
+            }
+            if (-not $launcher.HasExited) {
+              Stop-Process -Id $launcher.Id -Force
+            }
+            if (Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 5189 -State Listen -ErrorAction SilentlyContinue) {
+              throw "Port 5189 is still listening after stop."
             }
           }
 
-      - name: Stop first launch
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $conn = Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 5189 -State Listen -ErrorAction Stop | Select-Object -First 1
-          Write-Host "FIRST_SERVER_PID=$($conn.OwningProcess)"
-          Stop-Process -Id $conn.OwningProcess -Force
-          Start-Sleep -Seconds 1
-          if (Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 5189 -State Listen -ErrorAction SilentlyContinue) {
-            throw "Port 5189 is still listening after stop."
+          $first = Start-DocumentedApp
+          Write-Host "FIRST_HTTP_STATUS=$($first.Response.StatusCode)"
+          foreach ($needle in @('id="view-protection"','id="view-apps"','id="view-records"','id="student-identity"','id="vulnerabilities-result"')) {
+            if (-not $first.Response.Content.Contains($needle)) {
+              throw "Expected UI marker missing: $needle"
+            }
           }
+          Stop-DocumentedApp $first.Launcher "FIRST"
 
-      - name: Relaunch and verify clean checkout remains unchanged
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -Background | Out-Host
-          $response = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:5189/" -TimeoutSec 10
-          Write-Host "SECOND_HTTP_STATUS=$($response.StatusCode)"
-          if ($response.StatusCode -ne 200) { throw "Unexpected second HTTP status." }
+          $second = Start-DocumentedApp
+          Write-Host "SECOND_HTTP_STATUS=$($second.Response.StatusCode)"
+          Stop-DocumentedApp $second.Launcher "SECOND"
 
-          $conn = Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 5189 -State Listen -ErrorAction Stop | Select-Object -First 1
-          Write-Host "SECOND_SERVER_PID=$($conn.OwningProcess)"
-          Stop-Process -Id $conn.OwningProcess -Force
-          Start-Sleep -Seconds 1
-
-          $dirty = git status --porcelain
-          if ($dirty) {
-            Write-Host $dirty
+          $dirtyAfter = git status --porcelain
+          if ($dirtyAfter) {
+            Write-Host $dirtyAfter
             throw "Runtime changed repository files."
           }
+
           Write-Host "REPRODUCTION_RESULT=PASS"
