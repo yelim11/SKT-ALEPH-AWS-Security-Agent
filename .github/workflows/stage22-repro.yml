@@ -16,7 +16,7 @@ jobs:
       - name: Checkout exact submitted source
         uses: actions/checkout@v4
         with:
-          ref: a509c06619560e0bfa155758605764e07f8bb911
+          ref: 3aaf9cd487a035ee96c51690f8bbfefaa41bc5bc
           fetch-depth: 1
 
       - name: Use class Node version
@@ -31,7 +31,7 @@ jobs:
 
           $head = (git rev-parse HEAD).Trim()
           Write-Host "HEAD=$head"
-          if ($head -ne "a509c06619560e0bfa155758605764e07f8bb911") {
+          if ($head -ne "3aaf9cd487a035ee96c51690f8bbfefaa41bc5bc") {
             throw "HEAD mismatch: $head"
           }
 
