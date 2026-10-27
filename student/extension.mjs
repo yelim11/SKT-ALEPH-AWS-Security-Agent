@@ -1,10 +1,92 @@
 // 이 파일은 학생이 같은 프로젝트에서 이어서 구현합니다.
 // 제공 UI를 받은 것만으로 단계 완료를 인정하지 않습니다.
+
+// 개인 개발용 캐릭터 안내. 현재 0.2.11은 학생 전용 이미지/CSS 경로를 제공하지 않아
+// 이름과 임시 기호만 표시한다. 공식 이미지는 공개 Git에 포함하지 않는다.
+const FINAL_WEEK_CHARACTERS = Object.freeze({
+  identity: ['🐹', '치이카와', '사용자·기기·세션'],
+  decision: ['🦦', '랏코', '업무 앱 접근 판정'],
+  events: ['🐱', '하치와레', '보안 기록 타임라인'],
+  status: ['💗', '모몽가', '내 PC 상태와 알림'],
+  ai: ['🌰', '쿠리만쥬', 'AI 연결 점검'],
+  explanation: ['🦀', '카니', '사건 설명과 근거'],
+  action: ['🐰', '우사기', '조치 상태 확인'],
+  vulnerabilities: ['🌼', '시사', '설치 패키지 점검'],
+});
+
+function addFinalWeekCharacter(root, slot) {
+  const [symbol, name, topic] = FINAL_WEEK_CHARACTERS[slot];
+  const heading = document.createElement('div');
+  heading.className = 'notice';
+  const title = document.createElement('h3');
+  title.textContent = symbol + ' ' + name + ' · ' + topic;
+  const source = document.createElement('span');
+  source.className = 'tag tag-student';
+  source.textContent = '학생 테마 · 개인 사용';
+  heading.append(title, source);
+  root.appendChild(heading);
+}
+
+// PC 값을 받을 수 없는 앱 버전에서 미측정 항목을 정상/0으로 꾸미지 않는다.
+function addPcReadOnlyAvailability(root, mode) {
+  const block = document.createElement('section');
+  block.className = 'card';
+  const title = document.createElement('h3');
+  title.textContent = '🖥️ 내 PC 상태 · 측정 연결 점검';
+  block.appendChild(title);
+  const desc = document.createElement('p');
+  desc.textContent = '이 학생 화면에는 PC 실측 응답이 전달되지 않았습니다. 아래 수치는 예시나 측정 결과가 아닙니다.';
+  block.appendChild(desc);
+  const items = [
+    ['💗 모몽가 · CPU 사용률', '%'],
+    ['🌰 쿠리만쥬 · 메모리 사용량', 'MB'],
+    ['🌼 시사 · 디스크 남은 공간', 'GB'],
+    ['🦦 랏코 · 네트워크 구성/방화벽', '설정/상태'],
+    ['🦀 카니 · Windows System/Application 경고·오류 건수', '건'],
+  ];
+  const list = document.createElement('ul');
+  for (const [label, unit] of items) {
+    const line = document.createElement('li');
+    line.textContent = label + ': 확인 불가 · 원인: 현재 학생 화면에 실측 데이터 미전달 · 단위: ' + unit + ' · 측정 시각: 확인 불가';
+    list.appendChild(line);
+  }
+  block.appendChild(list);
+  const warning = document.createElement('p');
+  warning.textContent = 'Windows 경고·오류 건수는 침해·공격 탐지 건수가 아닙니다. 읽기 전용 조회만 허용하며, 방화벽·보안 설정은 변경하지 않습니다.';
+  block.appendChild(warning);
+  const connection = document.createElement('p');
+  connection.textContent = mode === 'disconnected'
+    ? 'SDP 미연결 · PC 로컬 상태와 독립적인 연결입니다.'
+    : 'SDP 실제 운영 연결 여부는 위 연결 상태와 제공 화면에서 별도로 확인하세요.';
+  block.appendChild(connection);
+  const refresh = document.createElement('button');
+  refresh.type = 'button';
+  refresh.className = 'btn';
+  refresh.textContent = '다시 조회';
+  const pending = document.createElement('p');
+  pending.setAttribute('role', 'status');
+  pending.setAttribute('aria-live', 'polite');
+  pending.textContent = '조회 대기 · 제공 화면에서 새 값이 오기 전까지는 확인 불가입니다.';
+  refresh.addEventListener('click', () => {
+    const providedRefresh = document.getElementById('refresh');
+    if (!(providedRefresh instanceof HTMLButtonElement) || providedRefresh.disabled) {
+      pending.textContent = '다시 조회 불가 · 제공 화면의 다시 불러오기 버튼을 확인하세요.';
+      return;
+    }
+    refresh.disabled = true;
+    pending.textContent = '제공 화면 다시 조회 요청 중 · PC 실측 기능 지원 여부는 별도 확인이 필요합니다.';
+    providedRefresh.click();
+  });
+  block.append(refresh, pending);
+  root.appendChild(block);
+}
+
 export function createStudentView() {
   return {
     renderIdentity({ me, devices, sessions }) {
       // 제공 UI는 반환한 DOM으로 학생 칸을 통째로 교체한다.
       const root = document.createElement('div');
+      addFinalWeekCharacter(root, 'identity');
       const modeLabels = {
         demo: '예제 자료',
         disconnected: '연결 없음',
@@ -101,6 +183,7 @@ export function createStudentView() {
     },
     renderDecision({ status, mode, data, error, appId }) {
       const root = document.createElement('section');
+      addFinalWeekCharacter(root, 'decision');
       const addText = (message) => {
         const line = document.createElement('p');
         line.textContent = message;
@@ -164,6 +247,7 @@ export function createStudentView() {
     renderEvents({ status, mode, data, error }) {
       // 제공 UI는 호출 때마다 반환한 DOM으로 학생 영역을 교체한다.
       const root = document.createElement('section');
+      addFinalWeekCharacter(root, 'events');
       const addText = (parent, value, tag = 'p') => {
         const element = document.createElement(tag);
         element.textContent = value;
@@ -239,6 +323,7 @@ export function createStudentView() {
 
       const resultCount = addText(root, '');
       const list = document.createElement('ul');
+      list.setAttribute('aria-label', '최신 조회 시각순 보안 기록 타임라인');
       root.appendChild(list);
 
       const addEntries = (parent, title, entries) => {
@@ -279,7 +364,9 @@ export function createStudentView() {
 
       const rowFor = (record) => {
         const row = document.createElement('li');
+        row.className = 'card';
         row.setAttribute('data-student-event-id', record.id);
+        addText(row, `${record.kind === 'xdr' ? '🐰 우사기 · XDR 경보' : '🐱 하치와레 · 접속 기록'} · 기록 타임라인`, 'h4');
         addText(row, `기록 ID: ${record.id}`);
         addText(row, `시각: ${record.at}`);
         addText(row, `기록 종류: ${kindLabels[record.kind] || '확인 불가'}(${record.kind})`);
@@ -328,6 +415,7 @@ export function createStudentView() {
     renderStatus({ devices, sessions, notifications, diagnostics, mode }) {
       // 매 호출마다 새 DOM을 만든다. 갱신 후 이전 실패·목록을 남기지 않는다.
       const root = document.createElement('section');
+      addFinalWeekCharacter(root, 'status');
       const addText = (parent, value, tag = 'p') => {
         const element = document.createElement(tag);
         element.textContent = value;
@@ -340,6 +428,7 @@ export function createStudentView() {
         root.appendChild(section);
         return section;
       };
+      addPcReadOnlyAvailability(root, mode);
       const modeLabels = {
         demo: '예제 자료(demo)',
         disconnected: '연결 없음(disconnected)',
@@ -468,6 +557,7 @@ export function createStudentView() {
     renderVulnerabilities({ status, mode, data, error }) {
       // 매 호출마다 새 DOM을 만들어 조회 중·오류·새 결과에서 이전 패키지 표가 남지 않게 한다.
       const root = document.createElement('section');
+      addFinalWeekCharacter(root, 'vulnerabilities');
       const addText = (parent, message, tag = 'p') => {
         const element = document.createElement(tag);
         element.textContent = message;
@@ -620,6 +710,7 @@ export function createStudentView() {
     renderAiConnection({ status, mode, data, error, checkedAt, explanationAccepted }) {
       // 제공 UI가 검사하고 전달한 점검 결과만 표시한다. 모델 목록 점검은 사건 설명 실행이 아니다.
       const root = document.createElement('section');
+      addFinalWeekCharacter(root, 'ai');
       const addText = (message) => {
         const line = document.createElement('p');
         line.textContent = message;
@@ -707,6 +798,7 @@ export function createStudentView() {
     renderExplanation({ event, explanation, checkedAt }) {
       // 매 호출마다 새 DOM을 반환해 다른 사건 선택·새로고침·실패 때 이전 설명과 성공 표식을 남기지 않는다.
       const root = document.createElement('section');
+      addFinalWeekCharacter(root, 'explanation');
       const addText = (parent, message, tag = 'p') => {
         const element = document.createElement(tag);
         element.textContent = message;
@@ -891,6 +983,7 @@ export function createStudentView() {
     renderAction({ status, event, actionId, target, receipt, observation, message, confirmationExpiresAt, error }) {
       // 매 호출마다 새 DOM을 만들어 새 사건·새 요청에서 이전 대상·영수증·결과가 남지 않게 한다.
       const root = document.createElement('section');
+      addFinalWeekCharacter(root, 'action');
       const addText = (text, tag = 'p') => {
         const element = document.createElement(tag);
         element.textContent = text;
