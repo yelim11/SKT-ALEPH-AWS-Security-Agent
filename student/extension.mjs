@@ -323,7 +323,7 @@ export function createStudentView() {
 
       const resultCount = addText(root, '');
       const list = document.createElement('ul');
-      list.setAttribute('aria-label', '최신 조회 시각순 보안 기록 타임라인');
+      list.setAttribute('aria-label', '기록 발생 시각(at) 최신순 보안 기록 타임라인');
       root.appendChild(list);
 
       const addEntries = (parent, title, entries) => {
