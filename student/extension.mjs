@@ -118,8 +118,8 @@ function installNoePrivatePages() {
   while(protection.firstChild) original.appendChild(protection.firstChild);
   const home = makePage('홈','glasses','보안 기록과 PC 점검을 한 곳에서 확인해요.','home');
   const pc = makePage('내 PC 상태','hachi-glasses','Windows CPU·메모리·디스크·방화벽·이벤트를 읽기 전용으로 조회합니다.','pc');
-  const alerts = makePage('위험 알림','floppy','SDP·XDR·Windows 경고와 조회 실패는 서로 다르게 표시합니다.','alerts');
-  const checks = makePage('오늘의 점검','trio','직접 확인한 항목만 기록합니다. 보안 점수나 검사 성공을 뜻하지 않아요.','checks');
+  const alerts = makePage('위험 알림','rakko','SDP·XDR·Windows 경고와 조회 실패는 서로 다르게 표시합니다.','alerts');
+  const checks = makePage('오늘의 점검','kuri','직접 확인한 항목만 기록합니다. 보안 점수나 검사 성공을 뜻하지 않아요.','checks');
   const settings = makePage('설정','blackstar','개인용 테마 설정 및 사용 안내','settings');
   const originalDisclosure = document.createElement('details');
   originalDisclosure.id = 'noe-provided-disclosure';
@@ -202,8 +202,8 @@ function installNoePrivatePages() {
     navExtras.push([page,b]);
   };
   addNav('noe-nav-pc','내 PC 상태','hachi-glasses','pc');
-  addNav('noe-nav-alerts','위험 알림','floppy','alerts');
-  addNav('noe-nav-checks','오늘의 점검','trio','checks');
+  addNav('noe-nav-alerts','위험 알림','rakko','alerts');
+  addNav('noe-nav-checks','오늘의 점검','kuri','checks');
   addNav('noe-nav-settings','설정','blackstar','settings');
   homeTab.textContent='홈';
   const brand=document.querySelector('.brand-name');
@@ -227,8 +227,8 @@ function installNoePrivatePages() {
   });
   const cards=el('div','noe-card-grid');
   const items=[
-    ['보안 기록','접속 기록·XDR·종류별 필터','hachi-fun','records',523],
-    ['내 PC 상태','CPU·메모리·디스크 상태','chi','pc',587],
+    ['보안 기록','접속 기록·XDR·종류별 필터','notebook','records',523],
+    ['내 PC 상태','CPU·메모리·디스크 상태','hachi-glasses','pc',587],
     ['위험 알림','SDP·XDR·Windows 경고 구분','rakko','alerts',649],
     ['오늘의 점검','확인한 항목 직접 기록','kuri','checks',719]
   ];
