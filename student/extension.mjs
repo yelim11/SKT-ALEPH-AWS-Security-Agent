@@ -29,59 +29,19 @@ function addFinalWeekCharacter(root, slot) {
 
 // PC 값을 받을 수 없는 앱 버전에서 미측정 항목을 정상/0으로 꾸미지 않는다.
 function addPcReadOnlyAvailability(root, mode) {
-  const block = document.createElement('section');
-  block.className = 'card';
-  const title = document.createElement('h3');
-  title.textContent = '내 PC 상태 · 측정 연결 점검';
-  block.appendChild(title);
-  const desc = document.createElement('p');
-  desc.textContent = '이 학생 화면에는 PC 실측 응답이 전달되지 않았습니다. 아래 수치는 예시나 측정 결과가 아닙니다.';
-  block.appendChild(desc);
-  const items = [
-    ['CPU 사용률', '%'],
-    ['메모리 사용량', 'MB'],
-    ['디스크 남은 공간', 'GB'],
-    ['네트워크 구성/방화벽', '설정/상태'],
-    ['Windows System/Application 경고·오류 건수', '건'],
-  ];
-  const list = document.createElement('ul');
-  for (const [label, unit] of items) {
-    const line = document.createElement('li');
-    line.textContent = label + ': 확인 불가 · 원인: 현재 학생 화면에 실측 데이터 미전달 · 단위: ' + unit + ' · 측정 시각: 확인 불가';
-    list.appendChild(line);
+  const box=document.createElement('section');box.className='card';
+  const title=document.createElement('h3');
+  title.textContent='보안 Agent 연결 정보';
+  const info=document.createElement('p');
+  info.textContent='Windows CPU·메모리·방화벽·이벤트 실측은 위쪽 로컬 PC 상태 화면에서 별도 조회합니다. 아래 기기·세션 자료는 Windows 실측과 다릅니다.';
+  box.append(title,info);
+  if(mode==='demo'){
+    const warning=document.createElement('p');
+    warning.textContent='예제 모드: SDP/XDR·기기·세션 내용은 실제 운영 탐지가 아닙니다.';
+    box.append(warning);
   }
-  block.appendChild(list);
-  const warning = document.createElement('p');
-  warning.textContent = 'Windows 경고·오류 건수는 침해·공격 탐지 건수가 아닙니다. 읽기 전용 조회만 허용하며, 방화벽·보안 설정은 변경하지 않습니다.';
-  block.appendChild(warning);
-  const connection = document.createElement('p');
-  connection.textContent = mode === 'disconnected'
-    ? 'SDP 미연결 · PC 로컬 상태와 독립적인 연결입니다.'
-    : 'SDP 실제 운영 연결 여부는 위 연결 상태와 제공 화면에서 별도로 확인하세요.';
-  block.appendChild(connection);
-  const refresh = document.createElement('button');
-  refresh.type = 'button';
-  refresh.className = 'btn';
-  refresh.textContent = '다시 조회';
-  const pending = document.createElement('p');
-  pending.setAttribute('role', 'status');
-  pending.setAttribute('aria-live', 'polite');
-  pending.textContent = '조회 대기 · 제공 화면에서 새 값이 오기 전까지는 확인 불가입니다.';
-  refresh.addEventListener('click', () => {
-    const providedRefresh = document.getElementById('refresh');
-    if (!(providedRefresh instanceof HTMLButtonElement) || providedRefresh.disabled) {
-      pending.textContent = '다시 조회 불가 · 제공 화면의 다시 불러오기 버튼을 확인하세요.';
-      return;
-    }
-    refresh.disabled = true;
-    pending.textContent = '제공 화면 다시 조회 요청 중 · PC 실측 기능 지원 여부는 별도 확인이 필요합니다.';
-    providedRefresh.click();
-  });
-  block.append(refresh, pending);
-  root.appendChild(block);
+  root.append(box);
 }
-
-
 
 
 // NOE_PRIVATE_SHELL_BEGIN — local personal theme; UI only, no new security/PC network requests.
@@ -129,7 +89,7 @@ function installNoePrivatePages() {
   original.id = 'noe-original-protection';
   while(protection.firstChild) original.appendChild(protection.firstChild);
   const home = makePage('홈','glasses','보안 기록과 PC 점검을 한 곳에서 확인해요.','home');
-  const pc = makePage('내 PC 상태','hachi','이 PC에서 확인 가능한 값과 아직 미지원인 값을 구분합니다.','pc');
+  const pc = makePage('내 PC 상태','hachi','Windows CPU·메모리·디스크·방화벽·이벤트를 읽기 전용으로 조회합니다.','pc');
   const alerts = makePage('위험 알림','floppy','SDP·XDR·Windows 경고와 조회 실패는 서로 다르게 표시합니다.','alerts');
   const checks = makePage('오늘의 점검','trio','직접 확인한 항목만 기록합니다. 보안 점수나 검사 성공을 뜻하지 않아요.','checks');
   const settings = makePage('설정','blackstar','개인용 테마 설정 및 사용 안내','settings');
@@ -196,6 +156,7 @@ function installNoePrivatePages() {
     homeTab.classList.toggle('noe-current',page==='home');
     recordTab.classList.toggle('noe-current',page==='records');
     appTab.classList.toggle('noe-current',page==='apps');
+    if(page==='pc'&&!pcLoaded&&!pcLoading)readLocalPc();
     window.scrollTo({top:0,behavior:'auto'});
   }
   const addNav=(id,name,symbol,page)=>{
@@ -245,13 +206,13 @@ function installNoePrivatePages() {
   const quick=el('div','noe-summary-grid');
   const quickCards=[
     ['최근 보안 기록','기록은 보안 기록 메뉴에서 확인하세요. 수집되지 않았다면 확인 불가입니다.','blackstar'],
-    ['내 PC 상태','실제 CPU·메모리·디스크 측정 API 미연결','shisa'],
+    ['내 PC 상태','Windows 로컬 사용량과 디스크 조회','shisa'],
     ['연결 상태','SDP 연결 여부는 상단 연결 상태와 함께 확인','yellowstar']
   ];
   for(const [name,desc,character] of quickCards){
     const card=el('section','noe-mini');card.append(art(character),el('h3','',name),el('p','',desc));quick.append(card);
   }
-  home.append(quick,el('p','noe-footnote','현재 0.2.11의 PC 실측·방화벽·Windows 이벤트 조회는 준비되지 않았습니다. 실제 값이 없으면 0이나 정상으로 표시하지 않습니다.'));
+  home.append(quick,el('p','noe-footnote','Windows 자원과 이벤트는 이 PC에서 별도 조회합니다. 실패를 정상이나 0건으로 표시하지 않습니다.'));
 
   // Existing records and Apps panels remain authentic and receive only headers.
   const recordsBanner=titleRow('보안 기록','notebook','기록 발생 시각 최신순 · 종류별 필터 · 실제 조회와 예제 자료 구분');
@@ -265,40 +226,81 @@ function installNoePrivatePages() {
   if(appsH){appsH.hidden=true;appsH.insertAdjacentElement('afterend',appsBanner);}
   else apps.prepend(appsBanner);
 
-  const pcData=el('div','noe-metric-grid');
-  for (const [name,unit,reason] of [
-    ['CPU 사용률','%','CPU 실측 인터페이스 미연결'],
-    ['메모리 사용량','MB','메모리 실측 인터페이스 미연결'],
-    ['디스크 남은 공간','GB','디스크 실측 인터페이스 미연결']
-  ]) {
+  // Windows local readings are separate from ALEPH engine/demo resources.
+  let pcLoaded=false,pcLoading=false;
+  const pcData=el('div','noe-metric-grid'),metricRefs={};
+  for(const [key,name,unit] of [
+    ['cpu','CPU 사용률','%'],
+    ['memory','메모리 사용량','MiB'],
+    ['disk','시스템 디스크 남은 공간','GiB']
+  ]){
     const block=el('section','noe-metric');
-    block.append(el('h2','',name),el('p','noe-value','확인 불가'),
-      el('p','noe-footnote','단위: '+unit+' · 측정 시각: 확인 불가'),
-      el('p','noe-footnote','이유: '+reason));
-    pcData.appendChild(block);
+    const value=el('p','noe-value','확인 불가');
+    const detail=el('p','noe-footnote','단위: '+unit+' · 조회 전');
+    block.append(el('h2','',name),value,detail);
+    pcData.append(block);metricRefs[key]={value,detail};
   }
   pc.insertBefore(pcData,statusCard||originalDisclosure);
   const pcOther=el('section','noe-panel');
-  pcOther.append(el('h2','','네트워크·방화벽·Windows 기록'),
-    el('p','noe-alert-line','네트워크 구성: 확인 불가 · 현재 로컬 조회 인터페이스 미연결'),
-    el('p','noe-alert-line','방화벽 설정: 확인 불가 · 읽기 전용 조회 인터페이스 미연결'),
-    el('p','noe-alert-line','System·Application 경고/오류: 확인 불가 · 건수와 조회 시각 미확인'),
-    el('p','noe-footnote','Windows 경고·오류 건수는 침해나 공격 탐지 건수가 아닙니다. 방화벽 설정을 변경하지 않습니다.'));
+  const networkLine=el('p','noe-alert-line','활성 네트워크 어댑터: 조회 전');
+  const firewallLine=el('p','noe-alert-line','Windows 방화벽 프로필: 조회 전');
+  const systemLine=el('p','noe-alert-line','System 오류·경고: 조회 전');
+  const appLine=el('p','noe-alert-line','Application 오류·경고: 조회 전');
+  pcOther.append(el('h2','','네트워크·방화벽·Windows 이벤트'),
+    networkLine,firewallLine,systemLine,appLine,
+    el('p','noe-footnote','Windows 최근 24시간의 오류·경고는 침해 탐지 건수가 아닙니다. 이벤트 원문과 IP·어댑터 이름을 수집하지 않으며 방화벽을 변경하지 않습니다.'));
   pc.insertBefore(pcOther,statusCard||originalDisclosure);
-  const pcRefresh=el('button','btn','다시 조회');pcRefresh.type='button';
-  const pcResult=el('p','noe-footnote','제공 화면 데이터 갱신만 가능합니다. PC 실측은 아직 지원하지 않습니다.');
+  const pcRefresh=el('button','btn','로컬 PC 다시 조회');pcRefresh.type='button';
+  const pcResult=el('p','noe-footnote','Windows 로컬 상태 조회는 SDP/XDR 정보와 별개입니다.');
   pcResult.setAttribute('role','status');pcResult.setAttribute('aria-live','polite');
-  pcRefresh.addEventListener('click',()=>{
-    const provided=$('refresh');
-    if(provided&&!provided.disabled){pcResult.textContent='제공 보안 정보 갱신 요청 중 · PC 실측 API는 미연결';provided.click();}
-    else pcResult.textContent='조회 불가 · 제공 새로고침이 활성화된 뒤 다시 시도하세요.';
-  });
+  const eventText=(label,value)=>{
+    const e=value?.error,w=value?.warning;
+    return Number.isInteger(e)&&e>=0&&Number.isInteger(w)&&w>=0
+      ?label+': 최근 24시간 오류 '+e+'건 · 경고 '+w+'건'
+      :label+': 확인 불가 · 접근 제한 또는 조회 실패';
+  };
+  async function readLocalPc(){
+    if(pcLoading)return;
+    pcLoading=true;pcRefresh.disabled=true;pcResult.textContent='Windows 로컬 상태를 조회하는 중…';
+    try{
+      const response=await fetch('/api/local/pc-health',{method:'GET',credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
+      if(!response.ok)throw Error('http');
+      const result=await response.json();
+      if(result?.ok!==true||!result?.data)throw Error('invalid');
+      const d=result.data;
+      if(!d.supported){pcResult.textContent='지원하지 않는 실행 환경입니다. Windows PC에서 실행해 주세요.';return;}
+      const time=new Date(d.checkedAt),at=Number.isNaN(time.getTime())?'조회 시각 미확인':time.toLocaleString('ko-KR');
+      for(const [key,value,unit] of [
+        ['cpu',d.cpu?.usagePercent,'%'],
+        ['memory',d.memory?.usedMiB,'MiB'],
+        ['disk',d.disk?.freeGiB,'GiB']
+      ]){
+        const ref=metricRefs[key],valid=typeof value==='number'&&Number.isFinite(value)&&value>=0;
+        ref.value.textContent=valid?String(value)+' '+unit:'확인 불가';
+        ref.detail.textContent=valid?'Windows 로컬 실측 · '+at:'접근 제한 또는 조회 실패 · '+at;
+      }
+      networkLine.textContent=Number.isInteger(d.network?.upAdapterCount)
+        ?'활성 네트워크 어댑터: '+d.network.upAdapterCount+'개 · IP와 이름 미수집'
+        :'활성 네트워크 어댑터: 확인 불가 · 접근 제한 또는 조회 실패';
+      const profiles=d.firewall?.profiles;
+      firewallLine.textContent=Array.isArray(profiles)&&profiles.length
+        ?'Windows 방화벽 프로필: '+profiles.map(p=>({Domain:'도메인',Private:'개인',Public:'공용'})[p.name]+' '+(p.enabled?'켜짐':'꺼짐')).join(' · ')
+        :'Windows 방화벽 프로필: 확인 불가 · 접근 제한 또는 조회 실패';
+      systemLine.textContent=eventText('System',d.events?.System);
+      appLine.textContent=eventText('Application',d.events?.Application);
+      pcResult.textContent='Windows 로컬 상태 조회 완료 · '+at+' · 위협 여부 판정과 무관';
+      pcLoaded=true;
+    }catch{pcResult.textContent='로컬 조회 실패 · 서버의 Windows 조회 기능을 확인하세요.';}
+    finally{pcLoading=false;pcRefresh.disabled=false;}
+  }
+  pcRefresh.addEventListener('click',()=>readLocalPc());
   pc.insertBefore(pcRefresh,originalDisclosure);pc.insertBefore(pcResult,originalDisclosure);
+
 
   const alertRows=[
     ['SDP 연결','실제 서버 연결 결과 미확인. 연결 확인이 안 되면 SDP 미연결로 구분해 표시합니다.'],
     ['XDR 경보','보안 기록 원천 응답 미확인. 예제 데이터는 공격 탐지 결과가 아닙니다.'],
-    ['Windows 이벤트','System/Application 경고·오류 조회 미연결. 경고 수는 공격 탐지가 아닙니다.']
+    ['Windows 이벤트','최근 24시간 System/Application 경고·오류 건수는 내 PC 상태에서 조회합니다. 경고 수는 공격 탐지가 아닙니다.']
   ];
   for(const [title,desc] of alertRows){const p=el('section','noe-alert');p.append(el('h2','',title),el('p','',desc));alerts.append(p);}
   const openRecords=el('button','btn','보안 기록에서 근거 확인');openRecords.type='button';

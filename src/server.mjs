@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {readLocalPcHealth} from './local-pc-health.mjs';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
@@ -359,6 +360,15 @@ export function createOnServer(serverOptions={}) {
       if(url.search)throw engineError('QUERY_REJECTED','지원하지 않는 요청입니다.',400);
       if(url.pathname.startsWith('/api/')&&req.headers['sec-fetch-site']==='cross-site')throw engineError('ORIGIN_REJECTED','');
       if(req.method==='POST'&&req.headers.origin!==`http://${host}`)throw engineError('ORIGIN_REJECTED','앱 화면에서 다시 요청하세요.',403);
+      // Local loopback-only read-only Windows summary; unrelated to SDP/XDR results.
+      if(url.pathname==='/api/local/pc-health'){
+        if(req.method!=='GET'){send(405,{ok:false,error:{code:'METHOD_NOT_ALLOWED',message:'GET만 지원합니다.'}});return;}
+        if(req.headers['sec-fetch-site']&&!['same-origin','none'].includes(req.headers['sec-fetch-site']))
+          throw engineError('ORIGIN_REJECTED','앱 화면에서 다시 요청하세요.',403);
+        if(req.headers.authorization!==undefined)throw engineError('REQUEST_INVALID','인증 헤더를 보내지 마세요.',400);
+        const data=await readLocalPcHealth({signal:lifetime.signal});
+        assertAlive();send(200,{ok:true,data});return;
+      }
       if(url.pathname.startsWith('/api/native-login/')){
         const kind=url.pathname.slice('/api/native-login/'.length);
         if(req.method!=='POST'||!['start','status','redeem','current','cancel'].includes(kind)){send(404,{ok:false,error:{code:'NOT_FOUND',message:'지원하지 않는 주소입니다.',retryable:false}});return;}

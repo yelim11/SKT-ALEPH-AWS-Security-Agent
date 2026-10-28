@@ -54,3 +54,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -De
 이 브랜치는 원본 22단계 제출용 main을 변경하지 않고, 각 화면이 개별 메뉴로 전환되도록 구현합니다. 원본 캐릭터 이미지는 사용자가 제공한 사진을 재가공한 것이므로 재배포·상업적 사용 권한을 별도로 확인해야 합니다. 사용자 업로드 대롱체 글꼴은 포함하지 않았으며 설치된 글꼴을 우선 사용합니다. Windows 실제 PC 측정 API가 없는 버전에서 CPU·메모리·디스크 사용량을 꾸며내지 않습니다.
 
 실행: `npm run check` 후 `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -Demo`. 서버는 로컬 포트 5189입니다.
+
+
+## Windows 로컬 실측: 개인 개발 확장
+
+Windows에서 앱 서버를 직접 실행하면 내 PC 상태 페이지가 /api/local/pc-health를 GET으로 호출합니다.
+CPU는 짧은 표본의 전체 사용률, 메모리는 OS의 전체·여유 메모리 차이(근삿값),
+시스템 디스크 남은 용량, 활성 네트워크 어댑터 수, 적용 중인 방화벽 프로필 켜짐 여부,
+최근 24시간 System/Application 오류·경고 건수를 표시합니다.
+원문 이벤트, IP 주소, 어댑터 이름, 비밀번호·토큰은 읽어 웹으로 전송하지 않습니다.
+실패나 권한 부족은 확인 불가로 표시하며 정상이나 0으로 대체하지 않습니다.
+Linux/macOS에서는 supported:false를 반환하고 Windows 값이 없음을 알립니다.
+
+실행: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -Demo
+브라우저 http://127.0.0.1:5189/ → 내 PC 상태 → 필요시 '로컬 PC 다시 조회'.
+-Demo의 보안 이벤트·SDP 데이터는 예제지만 로컬 CPU/메모리 등은 실행한 Windows PC의 값입니다.
+GET 경로는 localhost에만 수신하며 동일 출처 요청만 허용하고, Windows 명령은 정적·읽기 전용이며 실행 제한 9초를 둡니다.
+운영 위협 판정, 관리자 권한 획득, 외부 송신, 방화벽 변경 또는 공격 재현을 하지 않습니다.

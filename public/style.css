@@ -304,3 +304,8 @@ h1{font-size:1.8rem;margin:0 0 12px}h2{font-size:1.22rem}
 @media(max-width:850px){.layout{grid-template-columns:182px minmax(0,1fr)}.sidebar{padding:12px 7px}#nav [role=tab],#noe-extra-nav .noe-nav-extra{gap:7px;font-size:.93rem}.noe-welcome{padding:23px 19px}.noe-welcome>.noe-art{display:none}.noe-card-grid,.noe-metric-grid,.noe-summary-grid,.noe-checks{grid-template-columns:1fr 1fr}main{padding:17px}}
 /* NOE_PRIVATE_THEME_END */
 
+
+
+/* Read-only Windows local diagnostics presentation. */
+.noe-metric .noe-value{font-variant-numeric:tabular-nums}
+.noe-metric .noe-footnote,.noe-alert-line{overflow-wrap:anywhere}
