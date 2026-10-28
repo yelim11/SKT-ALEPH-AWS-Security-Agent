@@ -358,3 +358,22 @@ h1{font-size:1.8rem;margin:0 0 12px}h2{font-size:1.22rem}
 .noe-check-chip[data-state="marked"]{background:#e9f6ed;border-color:#cde5d3;color:#3e7f60}
 @media(max-width:1000px){.noe-alert-grid,.noe-fact-grid{grid-template-columns:1fr}.noe-chart-head{display:block}.noe-event-line{grid-template-columns:minmax(95px,1fr) minmax(80px,1.3fr) minmax(57px,.6fr);gap:7px}}
 @media(prefers-reduced-motion:reduce){.noe-bar-fill,.noe-event-fill{transition:none}}
+
+/* NOE_BOTTOM_SETTINGS_HACHI_20261028 */
+.noe-art--hachi-glasses{
+ background-image:url('/assets/alekov/noe-hachi-glasses.webp');
+ background-size:contain;background-position:center;background-repeat:no-repeat;
+}
+.sidebar{display:flex;flex-direction:column;align-self:start;position:sticky;top:0;
+ height:calc(100vh - 74px);min-height:440px;overflow-y:auto;scrollbar-gutter:stable;}
+#nav{flex:0 0 auto;}
+#noe-sidebar-footer{margin-top:auto;padding-top:15px;border-top:1px solid #eddddf;}
+#noe-sidebar-footer .noe-nav-extra{
+ display:flex;align-items:center;gap:12px;width:100%;min-height:57px;padding:8px 12px;
+ border:0;border-radius:13px;background:transparent;text-align:left;color:#523e3c;
+ font:inherit;font-size:1.08rem;cursor:pointer;
+}
+#noe-sidebar-footer .noe-art{width:41px;height:41px;}
+#noe-sidebar-footer .noe-nav-extra:hover{background:#fde9ef;}
+#noe-sidebar-footer .noe-nav-extra[aria-current="page"]{background:#f9e2e9;color:#9b5070;font-weight:bold;}
+@media(max-width:850px){#noe-sidebar-footer .noe-nav-extra{font-size:.93rem;gap:7px;}}
