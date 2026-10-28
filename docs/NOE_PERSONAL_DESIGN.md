@@ -45,3 +45,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -De
 운영 보안 설정·방화벽·계정·인증/조치 로직은 변경하지 않습니다. 사용자 개인 PC에서 읽기 전용으로 확인하며 관리자 권한이나 침투 테스트를 요구하지 않습니다.
 
 > 이는 개인 개발용 디자인 적용 브랜치이지, ALEPH 서버의 새 단계 통과나 운영 보안 도구 인증을 의미하지 않습니다.
+
+
+---
+
+## 개인용 화면 적용
+
+이 브랜치는 원본 22단계 제출용 main을 변경하지 않고, 각 화면이 개별 메뉴로 전환되도록 구현합니다. 원본 캐릭터 이미지는 사용자가 제공한 사진을 재가공한 것이므로 재배포·상업적 사용 권한을 별도로 확인해야 합니다. 사용자 업로드 대롱체 글꼴은 포함하지 않았으며 설치된 글꼴을 우선 사용합니다. Windows 실제 PC 측정 API가 없는 버전에서 CPU·메모리·디스크 사용량을 꾸며내지 않습니다.
+
+실행: `npm run check` 후 `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\start-alekov.ps1 -Demo`. 서버는 로컬 포트 5189입니다.

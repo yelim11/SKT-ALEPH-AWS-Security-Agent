@@ -82,143 +82,270 @@ function addPcReadOnlyAvailability(root, mode) {
 }
 
 
-// NOE_PERSONAL_DESIGN_BEGIN — local UI only; does not change SDP/auth/action APIs.
-// Copyrighted character images and font files are deliberately excluded from public Git.
-function installNoeDesign() {
-  const byId = id => document.getElementById(id);
-  if (byId('noe-welcome')) return;
-  const node = (tag, cls = '', label = '') => {
+
+
+// NOE_PRIVATE_SHELL_BEGIN — local personal theme; UI only, no new security/PC network requests.
+function installNoePrivatePages() {
+  const $ = id => document.getElementById(id);
+  if ($('noe-page-home')) return;
+  const protection = $('view-protection');
+  const records = $('view-records');
+  const apps = $('view-apps');
+  const nav = $('nav');
+  const homeTab = $('tab-protection');
+  const recordTab = $('tab-records');
+  const appTab = $('tab-apps');
+  if (!protection || !records || !apps || !nav || !homeTab || !recordTab || !appTab) return;
+
+  const el = (tag, cls = '', value = '') => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
-    if (label) n.textContent = label;
+    if (value) n.textContent = value;
     return n;
   };
-  const art = (symbol, title) => {
-    const n = node('span','noe-symbol',symbol);
-    n.setAttribute('aria-hidden','true');
-    n.title=title;
-    return n;
+  const art = name => {
+    const a = el('span', 'noe-art noe-art--' + name);
+    a.setAttribute('aria-hidden','true');
+    return a;
   };
-  const main = byId('view-protection');
-  const nav = byId('nav');
-  if (!main || !nav) return;
-  const welcome = node('section','noe-welcome');
-  welcome.id='noe-welcome';
+  const titleRow = (name, symbol, subtitle) => {
+    const h = el('header','noe-page-heading');
+    const info=el('div');
+    info.append(el('h1','',name),el('p','noe-muted',subtitle));
+    h.append(info,art(symbol));
+    return h;
+  };
+  const makePage = (name, symbol, subtitle, key) => {
+    const p = el('section','noe-page');
+    p.id = 'noe-page-' + key;
+    p.append(titleRow(name,symbol,subtitle));
+    protection.appendChild(p);
+    return p;
+  };
+
+  // Preserve ALL original provided DOM and event IDs, but keep it behind a
+  // disclosure on the PC status page rather than dumping every section at Home.
+  const original = document.createElement('div');
+  original.id = 'noe-original-protection';
+  while(protection.firstChild) original.appendChild(protection.firstChild);
+  const home = makePage('홈','glasses','보안 기록과 PC 점검을 한 곳에서 확인해요.','home');
+  const pc = makePage('내 PC 상태','hachi','이 PC에서 확인 가능한 값과 아직 미지원인 값을 구분합니다.','pc');
+  const alerts = makePage('위험 알림','floppy','SDP·XDR·Windows 경고와 조회 실패는 서로 다르게 표시합니다.','alerts');
+  const checks = makePage('오늘의 점검','trio','직접 확인한 항목만 기록합니다. 보안 점수나 검사 성공을 뜻하지 않아요.','checks');
+  const settings = makePage('설정','blackstar','개인용 테마 설정 및 사용 안내','settings');
+  const originalDisclosure = document.createElement('details');
+  originalDisclosure.id = 'noe-provided-disclosure';
+  originalDisclosure.className = 'noe-disclosure';
+  originalDisclosure.append(el('summary','','기존 보안 Agent 상세 정보 · 계정/기기/AI/취약점 펼쳐보기'), original);
+  pc.appendChild(originalDisclosure);
+
+  // Keep the actual original student state renderer prominently visible in PC view.
+  const status = $('student-status');
+  const statusCard = status && status.closest('.card.student');
+  if (statusCard) pc.insertBefore(statusCard, originalDisclosure);
+
+  const welcome = el('section','noe-welcome');
   welcome.append(
-    node('p','noe-overline','노예 · 개인 보안 일기장'),
-    node('h2','', '오늘의 보안도 차근차근 살펴볼까?'),
-    node('p','noe-muted','보안 기록과 내 PC 상태를 확인하는 공간'),
-    node('p','noe-disclaimer','실제 측정값과 예제 자료는 각각 구분해 표시합니다.')
+    el('p','noe-eyebrow','나만의 보안 일기장'),
+    el('h2','','오늘의 보안도\n차근차근 살펴볼까?'),
+    el('p','','보안 기록과 내 PC 상태를 한눈에 확인하는 공간'),
+    el('span','noe-preview-label','실제 조회와 예제 자료는 분리해서 표시해요'),
+    art('glasses')
   );
-  welcome.append(art('🐰','우사기'));
-  const tabs={home:byId('tab-protection'),events:byId('tab-records'),apps:byId('tab-apps')};
-  const jump=(tab,target)=>{
-    if (!tab) return;
-    tab.click();
-    if(target)requestAnimationFrame(()=>{
-      const el=byId(target);
-      if (el)el.scrollIntoView({block:'start',behavior:'auto'});
-    });
-  };
+  home.appendChild(welcome);
+
   const soundKey='noe-personal-click-sound-v1';
   let audioCtx;
-  const beep=(frequency)=>{
-    try{
-      if(localStorage.getItem(soundKey)==='off')return;
-      const C=window.AudioContext||window.webkitAudioContext;
-      if(!C)return;
-      audioCtx=audioCtx||new C();
-      const osc=audioCtx.createOscillator(),g=audioCtx.createGain(),t=audioCtx.currentTime;
-      osc.type='sine';osc.frequency.setValueAtTime(frequency,t);
-      g.gain.setValueAtTime(0.012,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.09);
-      osc.connect(g);g.connect(audioCtx.destination);osc.start(t);osc.stop(t+0.09);
-    }catch{}
-  };
-  const cards=node('div','noe-card-grid');
-  const features=[
-    ['보안 기록','종류별 필터와 상세 근거','📓','수첩 든 치이카와',tabs.events,'student-events',523],
-    ['내 PC 상태','실측 지원 여부 확인','🐱','하치와레',tabs.home,'student-status',587],
-    ['위험 알림','SDP·XDR·Windows 상태','🐶','귀 늘어진 캐릭터',tabs.home,'noe-alerts',649],
-    ['오늘의 점검','직접 확인한 항목 기록','🐰','세 친구',tabs.home,'noe-checklist',719]
-  ];
-  for(const [name,detail,symbol,alt,tab,target,tone] of features){
-    const b=node('button','noe-feature');b.type='button';
-    b.append(node('strong','noe-feature-title',name),art(symbol,alt),node('span','noe-feature-desc',detail));
-    b.addEventListener('click',()=>{beep(tone);jump(tab,target);});
-    cards.append(b);
+  function chime(frequency) {
+    try {
+      if (localStorage.getItem(soundKey) === 'off') return;
+      const A=window.AudioContext||window.webkitAudioContext;
+      if(!A)return;
+      audioCtx=audioCtx||new A();
+      const t=audioCtx.currentTime;
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type='sine';o.frequency.setValueAtTime(frequency,t);
+      g.gain.setValueAtTime(.012,t);g.gain.exponentialRampToValueAtTime(.001,t+.10);
+      o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+.10);
+    }catch { /* Optional sound may be unavailable. */ }
   }
-  const h1=main.querySelector('h1');
-  if (h1){h1.textContent='홈';h1.insertAdjacentElement('afterend',welcome);welcome.insertAdjacentElement('afterend',cards);}
-  else main.prepend(welcome,cards);
-  if(tabs.home)tabs.home.textContent='홈';
+
+  const subpages = { home,pc,alerts,checks,settings };
+  const extraNav=el('div','noe-extra-nav');
+  extraNav.id='noe-extra-nav';
+  extraNav.setAttribute('aria-label','개인 기능 메뉴');
+  extraNav.setAttribute('role','group');
+  nav.insertBefore(recordTab,appTab);
+  nav.insertBefore(extraNav,appTab);
+  const navExtras=[];
+  let navigating=false;
+  function showPage(page) {
+    if (!['home','records','pc','alerts','checks','settings','apps'].includes(page))return;
+    // The provided frontend owns its three top-level panels. We only invoke
+    // the existing button handlers; never change its auth/network lifecycle.
+    navigating=true;
+    try {
+      const target=(page==='records')?recordTab:(page==='apps')?appTab:homeTab;
+      if(target.getAttribute('aria-selected')!=='true')target.click();
+    } finally {navigating=false;}
+    for(const [name,node] of Object.entries(subpages))node.hidden=(name!==page);
+    for(const [name,node] of navExtras){
+      if(name===page)node.setAttribute('aria-current','page');
+      else node.removeAttribute('aria-current');
+    }
+    homeTab.classList.toggle('noe-current',page==='home');
+    recordTab.classList.toggle('noe-current',page==='records');
+    appTab.classList.toggle('noe-current',page==='apps');
+    window.scrollTo({top:0,behavior:'auto'});
+  }
+  const addNav=(id,name,symbol,page)=>{
+    const b=el('button','noe-nav-extra');b.id=id;b.type='button';
+    b.append(art(symbol),el('span','',name));
+    b.addEventListener('click',()=>{chime(560);showPage(page);});
+    extraNav.appendChild(b);navExtras.push([page,b]);
+  };
+  addNav('noe-nav-pc','내 PC 상태','hachi','pc');
+  addNav('noe-nav-alerts','위험 알림','floppy','alerts');
+  addNav('noe-nav-checks','오늘의 점검','trio','checks');
+  addNav('noe-nav-settings','설정','blackstar','settings');
+  homeTab.textContent='홈';
   const brand=document.querySelector('.brand-name');
-  if(brand){brand.textContent='노예';brand.append(node('small','','보안 Agent · 개인 개발용'));}
+  if(brand){brand.textContent='노예';brand.append(el('small','','보안 Agent · 개인용'));}
   document.title='노예 · 보안 일기장';
-  const extraNav=node('div','noe-extra-nav');extraNav.id='noe-extra-nav';
-  extraNav.setAttribute('role','group');extraNav.setAttribute('aria-label','개인 기능 메뉴');
-  nav.insertAdjacentElement('afterend',extraNav);
-  const extraMenu=[
-    ['내 PC 상태','🐱',tabs.home,'student-status'],
-    ['위험 알림','🐶',tabs.home,'noe-alerts'],
-    ['오늘의 점검','🐰',tabs.home,'noe-checklist'],
-    ['설정','⭐',tabs.home,'noe-settings']
+  const brandIcon=document.querySelector('.brand-icon');
+  if(brandIcon)brandIcon.setAttribute('alt','');
+  // Direct clicks on provided tabs (including keyboard) return to proper pages.
+  homeTab.addEventListener('click',()=>{if(!navigating)showPage('home');});
+  recordTab.addEventListener('click',()=>{if(!navigating)showPage('records');});
+  appTab.addEventListener('click',()=>{if(!navigating)showPage('apps');});
+  nav.addEventListener('keydown',(e)=>{
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End'].includes(e.key)){
+      setTimeout(()=>{
+        const selected=nav.querySelector('[role="tab"][aria-selected="true"]');
+        if(selected===homeTab)showPage('home');
+        else if(selected===recordTab)showPage('records');
+        else if(selected===appTab)showPage('apps');
+      },0);
+    }
+  });
+  const cards=el('div','noe-card-grid');
+  const items=[
+    ['보안 기록','접속 기록·XDR·종류별 필터','hachi-fun','records',523],
+    ['내 PC 상태','CPU·메모리·디스크 상태','chi','pc',587],
+    ['위험 알림','SDP·XDR·Windows 경고 구분','rakko','alerts',649],
+    ['오늘의 점검','확인한 항목 직접 기록','kuri','checks',719]
   ];
-  for (const [name,symbol,tab,target] of extraMenu){
-    const b=node('button','noe-nav-extra');b.type='button';
-    b.append(art(symbol,name),node('span','',name));
-    b.addEventListener('click',()=>{beep(550);jump(tab,target);});
-    extraNav.append(b);
+  for (const [name,detail,character,page,tone] of items) {
+    const b=el('button','noe-feature');b.type='button';
+    b.append(el('strong','noe-feature-title',name),art(character),el('span','noe-feature-desc',detail));
+    b.addEventListener('click',()=>{chime(tone);showPage(page);});
+    cards.appendChild(b);
   }
-  const panel=(id,title,symbol,description)=>{
-    const p=node('section','noe-panel');p.id=id;
-    const header=node('div','noe-panel-heading');
-    header.append(art(symbol,title),node('h2','',title));p.append(header,node('p','noe-muted',description));
-    main.append(p);return p;
-  };
-  const alerts=panel('noe-alerts','위험 알림','🐶','로컬 정보 확인과 실제 탐지 결과는 서로 다릅니다.');
-  for(const text of [
-    'SDP: 실제 운영 서버 연결 여부 미확인 · 제공 화면의 연결 표시를 확인하세요.',
-    'XDR: 운영 원천 탐지 결과 미확인 · 예제 기록을 실제 공격 탐지라고 표시하지 않습니다.',
-    'Windows System/Application 경고·오류: 조회 미연결 · 경고 건수는 공격 탐지 건수가 아닙니다.'
-  ])alerts.append(node('p','noe-alert-line',text));
-  const checks=panel('noe-checklist','오늘의 점검','🐰','이 목록은 내가 확인했다는 기록이며 검사 성공을 뜻하지 않습니다.');
-  const checkTasks=[
-    '보안 기록 종류 필터 확인','SDP 연결 상태 확인','CPU·메모리·디스크 측정 가능 여부 확인',
-    'Windows 로그·방화벽 조회 가능 여부 확인','미확인 항목과 이유 확인'
+  home.appendChild(cards);
+  const quick=el('div','noe-summary-grid');
+  const quickCards=[
+    ['최근 보안 기록','기록은 보안 기록 메뉴에서 확인하세요. 수집되지 않았다면 확인 불가입니다.','blackstar'],
+    ['내 PC 상태','실제 CPU·메모리·디스크 측정 API 미연결','shisa'],
+    ['연결 상태','SDP 연결 여부는 상단 연결 상태와 함께 확인','yellowstar']
   ];
-  const data=(()=>{try{const a=JSON.parse(localStorage.getItem('noe-checklist-v1')||'{}');return a&&typeof a==='object'?a:{};}catch{return {};}})();
-  const form=node('div','noe-checks'),inputs=[],progress=node('p','noe-progress');
+  for(const [name,desc,character] of quickCards){
+    const card=el('section','noe-mini');card.append(art(character),el('h3','',name),el('p','',desc));quick.append(card);
+  }
+  home.append(quick,el('p','noe-footnote','현재 0.2.11의 PC 실측·방화벽·Windows 이벤트 조회는 준비되지 않았습니다. 실제 값이 없으면 0이나 정상으로 표시하지 않습니다.'));
+
+  // Existing records and Apps panels remain authentic and receive only headers.
+  const recordsBanner=titleRow('보안 기록','notebook','기록 발생 시각 최신순 · 종류별 필터 · 실제 조회와 예제 자료 구분');
+  recordsBanner.classList.add('noe-native-heading');
+  const recordsH=records.querySelector('h1');
+  if(recordsH){recordsH.hidden=true;recordsH.insertAdjacentElement('afterend',recordsBanner);}
+  else records.prepend(recordsBanner);
+  const appsBanner=titleRow('업무 앱','kani','접속 판정과 오류는 구분합니다. 실제 요청은 버튼으로만 실행합니다.');
+  appsBanner.classList.add('noe-native-heading');
+  const appsH=apps.querySelector('h1');
+  if(appsH){appsH.hidden=true;appsH.insertAdjacentElement('afterend',appsBanner);}
+  else apps.prepend(appsBanner);
+
+  const pcData=el('div','noe-metric-grid');
+  for (const [name,unit,reason] of [
+    ['CPU 사용률','%','CPU 실측 인터페이스 미연결'],
+    ['메모리 사용량','MB','메모리 실측 인터페이스 미연결'],
+    ['디스크 남은 공간','GB','디스크 실측 인터페이스 미연결']
+  ]) {
+    const block=el('section','noe-metric');
+    block.append(el('h2','',name),el('p','noe-value','확인 불가'),
+      el('p','noe-footnote','단위: '+unit+' · 측정 시각: 확인 불가'),
+      el('p','noe-footnote','이유: '+reason));
+    pcData.appendChild(block);
+  }
+  pc.insertBefore(pcData,statusCard||originalDisclosure);
+  const pcOther=el('section','noe-panel');
+  pcOther.append(el('h2','','네트워크·방화벽·Windows 기록'),
+    el('p','noe-alert-line','네트워크 구성: 확인 불가 · 현재 로컬 조회 인터페이스 미연결'),
+    el('p','noe-alert-line','방화벽 설정: 확인 불가 · 읽기 전용 조회 인터페이스 미연결'),
+    el('p','noe-alert-line','System·Application 경고/오류: 확인 불가 · 건수와 조회 시각 미확인'),
+    el('p','noe-footnote','Windows 경고·오류 건수는 침해나 공격 탐지 건수가 아닙니다. 방화벽 설정을 변경하지 않습니다.'));
+  pc.insertBefore(pcOther,statusCard||originalDisclosure);
+  const pcRefresh=el('button','btn','다시 조회');pcRefresh.type='button';
+  const pcResult=el('p','noe-footnote','제공 화면 데이터 갱신만 가능합니다. PC 실측은 아직 지원하지 않습니다.');
+  pcResult.setAttribute('role','status');pcResult.setAttribute('aria-live','polite');
+  pcRefresh.addEventListener('click',()=>{
+    const provided=$('refresh');
+    if(provided&&!provided.disabled){pcResult.textContent='제공 보안 정보 갱신 요청 중 · PC 실측 API는 미연결';provided.click();}
+    else pcResult.textContent='조회 불가 · 제공 새로고침이 활성화된 뒤 다시 시도하세요.';
+  });
+  pc.insertBefore(pcRefresh,originalDisclosure);pc.insertBefore(pcResult,originalDisclosure);
+
+  const alertRows=[
+    ['SDP 연결','실제 서버 연결 결과 미확인. 연결 확인이 안 되면 SDP 미연결로 구분해 표시합니다.'],
+    ['XDR 경보','보안 기록 원천 응답 미확인. 예제 데이터는 공격 탐지 결과가 아닙니다.'],
+    ['Windows 이벤트','System/Application 경고·오류 조회 미연결. 경고 수는 공격 탐지가 아닙니다.']
+  ];
+  for(const [title,desc] of alertRows){const p=el('section','noe-alert');p.append(el('h2','',title),el('p','',desc));alerts.append(p);}
+  const openRecords=el('button','btn','보안 기록에서 근거 확인');openRecords.type='button';
+  openRecords.addEventListener('click',()=>showPage('records'));alerts.append(openRecords);
+
+  const tasks=['보안 기록 필터 확인','SDP 연결 상태 확인','PC 사용량 측정 지원 여부 확인','방화벽·Windows 로그 조회 가능 여부 확인','확인 불가 항목과 이유 확인'];
+  const storageKey='noe-personal-checks-v1';
+  let saved={};try{const s=JSON.parse(localStorage.getItem(storageKey)||'{}');if(s&&typeof s==='object'&&!Array.isArray(s))saved=s;}catch{}
+  const wrap=el('div','noe-checks'),progress=el('p','noe-footnote');
   progress.setAttribute('role','status');progress.setAttribute('aria-live','polite');
-  const redraw=()=>{progress.textContent='직접 확인 표시: '+inputs.filter(x=>x.checked).length+' / '+inputs.length+'개 · 보안 상태 판정 아님';};
-  checkTasks.forEach((name,i)=>{
-    const l=node('label'),input=document.createElement('input');
-    input.type='checkbox';input.checked=Boolean(data[i]);inputs.push(input);
-    l.append(input,node('span','',name));form.append(l);
-    input.addEventListener('change',()=>{
-      const out={};inputs.forEach((x,j)=>{if(x.checked)out[j]=new Date().toISOString();});
-      try{localStorage.setItem('noe-checklist-v1',JSON.stringify(out));}catch{}
+  const inputs=[];
+  const redraw=()=>{progress.textContent='직접 확인 표시: '+inputs.filter(x=>x.checked).length+' / '+inputs.length+'개 · 보안 판정과 무관';};
+  tasks.forEach((label,index)=>{
+    const row=el('label','noe-check-row'),box=document.createElement('input'),description=el('span','',label),time=el('small','noe-checked-time');
+    box.type='checkbox';box.checked=Boolean(saved[index]);
+    if(box.checked&&typeof saved[index]==='string')time.textContent='사용자 체크 시각: '+new Date(saved[index]).toLocaleString('ko-KR');
+    row.append(box,description,time);wrap.appendChild(row);inputs.push(box);
+    box.addEventListener('change',()=>{
+      const state={};inputs.forEach((x,i)=>{if(x.checked)state[i]=(i===index&&x.checked)?new Date().toISOString():(saved[i]||new Date().toISOString());});
+      saved=state;try{localStorage.setItem(storageKey,JSON.stringify(state));}catch{}
+      time.textContent=box.checked?'사용자 체크 시각: '+new Date(saved[index]).toLocaleString('ko-KR'):'';
       redraw();
     });
   });
-  checks.append(form,progress);
-  const clear=node('button','btn','체크 기록 초기화');clear.type='button';
-  clear.addEventListener('click',()=>{
-    inputs.forEach(x=>x.checked=false);
-    try{localStorage.removeItem('noe-checklist-v1');}catch{}
-    redraw();
-  });checks.append(clear);redraw();
-  const settings=panel('noe-settings','개인 설정','⭐','테마·소리 설정은 이 브라우저에서만 저장됩니다.');
-  const label=node('label','noe-sound-option'),sound=document.createElement('input');
-  sound.type='checkbox';
+  checks.append(wrap,progress);
+  const reset=el('button','btn','체크 기록 초기화');reset.type='button';
+  reset.addEventListener('click',()=>{
+    inputs.forEach(input=>input.checked=false);
+    saved={};try{localStorage.removeItem(storageKey);}catch{}
+    wrap.querySelectorAll('.noe-checked-time').forEach(t=>t.textContent='');redraw();
+  });checks.append(reset);redraw();
+
+  const settingsRow=el('label','noe-setting-row'),sound=document.createElement('input');sound.type='checkbox';
   try{sound.checked=localStorage.getItem(soundKey)!=='off';}catch{sound.checked=true;}
   sound.addEventListener('change',()=>{try{localStorage.setItem(soundKey,sound.checked?'on':'off');}catch{}});
-  label.append(sound,node('span','','클릭 효과음 사용'));
-  settings.append(label,node('p','noe-muted','캐릭터 사진·대롱체 글꼴은 개인 PC의 비공개 테마 파일에서만 사용하세요.'));
+  settingsRow.append(sound,el('span','','클릭 효과음 사용'));settings.append(settingsRow);
+  settings.append(el('p','noe-footnote','이 설정은 이 브라우저에만 저장돼요. 보안 기록·연결 상태·실제 PC 측정 결과에는 영향을 주지 않습니다.'),
+    el('p','noe-footnote','원작 캐릭터 이미지와 업로드 글꼴은 개인 PC에서만 사용하며 공개 저장소에는 포함하지 않습니다.'));
+
+  // Enter with only the Home page visible. No long scroll of other pages.
+  showPage('home');
 }
-// NOE_PERSONAL_DESIGN_END
+// NOE_PRIVATE_SHELL_END
+
 
 export function createStudentView() {
-  try { installNoeDesign(); } catch { /* theme must not break security UI */ }
+  try { installNoePrivatePages(); } catch { /* theme must not break security UI */ }
   return {
     renderIdentity({ me, devices, sessions }) {
       // 제공 UI는 반환한 DOM으로 학생 칸을 통째로 교체한다.
