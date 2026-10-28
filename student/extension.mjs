@@ -536,7 +536,9 @@ function installNoePrivatePages() {
   alerts.append(alertsRefresh);
 
   const tasks=['보안 기록 필터 확인','SDP 연결 상태 확인','PC 사용량 측정 지원 여부 확인','방화벽·Windows 로그 조회 가능 여부 확인','확인 불가 항목과 이유 확인'];
-  const storageKey='noe-personal-checks-v1';
+  // Browser-local calendar date, not a security scan result.
+  const localDay=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
+  let storageKey='noe-personal-checks-v2-'+localDay();
   let saved={};try{const s=JSON.parse(localStorage.getItem(storageKey)||'{}');if(s&&typeof s==='object'&&!Array.isArray(s))saved=s;}catch{}
   const wrap=el('div','noe-checks'),progress=el('p','noe-footnote');
   progress.setAttribute('role','status');progress.setAttribute('aria-live','polite');
