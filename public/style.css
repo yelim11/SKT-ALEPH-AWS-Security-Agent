@@ -207,3 +207,60 @@ main:focus { outline: none; }
 .state-ok { background: var(--allow-soft); color: var(--allow); }
 .ai-result[data-state="connected"] { border-left: 3px solid var(--allow); padding-left: 12px; }
 .ai-result[data-state="unknown"] { border-left: 3px solid var(--unknown); padding-left: 12px; }
+
+
+/* NOE_PUBLIC_DESIGN_BEGIN: palette and layout only. Personal character media not tracked. */
+:root{
+  --bg:#fffaf8;--surface:#fff;--border:#efdde0;--text:#473532;--muted:#927875;
+  --accent:#b65c7c;--accent-soft:#fce9ee;--allow:#387d5b;--allow-soft:#e8f5ee;
+  --deny:#af4d62;--deny-soft:#fff0f1;--challenge:#987334;--challenge-soft:#fff7e5;
+  --student:#b36387;--student-soft:#fceaf1;--radius:16px;
+  font-family:"온글잎 대롱체","Malgun Gothic",system-ui,sans-serif;
+}
+body{min-width:760px}
+.topbar{background:#fff9f7;min-height:74px;height:auto;padding:14px 26px;border-bottom-color:#f1d9dd}
+.brand-name{font-size:1.4rem}.brand-name small{display:block;margin-top:3px;font-size:.8rem}
+.layout{grid-template-columns:230px minmax(0,1fr)}
+.sidebar{background:#fff8f6;border-color:#f2dedf}
+#nav [role="tab"],.noe-nav-extra{min-height:49px;border-radius:12px;font-size:1.06rem}
+#nav [role="tab"][aria-selected="true"],.noe-nav-extra:hover{background:#f9e3ea;color:#a54e74}
+.noe-extra-nav{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.noe-nav-extra{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;text-align:left;background:transparent;color:var(--text);border:0;cursor:pointer;font:inherit}
+.noe-nav-extra:hover,.noe-nav-extra:focus-visible{background:#f9e3ea}
+.noe-nav-extra .noe-symbol{font-size:1.45rem;width:32px;height:32px}
+main{max-width:1560px}
+.card{border-radius:16px}
+.btn{border-radius:10px}
+.notice{border:1px solid #f2d9df;background:#fff1f4}
+.noe-welcome{position:relative;min-height:205px;padding:27px 220px 26px 28px;margin:10px 0 18px;background:#fff0f2;border:1px solid #f2cfd9;border-radius:20px;overflow:hidden}
+.noe-welcome .noe-overline{font-size:.87rem;color:#ae6884;font-weight:700;margin:0 0 8px}
+.noe-welcome h2{font-size:2.1rem;line-height:1.22;color:#513940;white-space:pre-line;margin:0 0 12px}
+.noe-welcome p{margin:6px 0;color:#866b71}
+.noe-welcome .noe-disclaimer{font-size:.82rem}
+.noe-welcome>.noe-symbol{position:absolute;top:20px;right:29px;display:grid;place-items:center;width:165px;height:165px;font-size:5.5rem}
+.noe-card-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:21px}
+.noe-feature{display:flex;flex-direction:column;align-items:flex-start;min-height:200px;cursor:pointer;font:inherit;text-align:left;color:#49353a;background:#fff1f4;border:1px solid #f2d8de;border-radius:18px;padding:17px 12px 14px}
+.noe-feature:nth-child(2){background:#eff9fc;border-color:#d5eaf0}
+.noe-feature:nth-child(3){background:#fff8e9;border-color:#f1e2bf}
+.noe-feature:nth-child(4){background:#f1f8ef;border-color:#deebd7}
+.noe-feature:hover{border-color:#d89bac}
+.noe-feature .noe-feature-title{font-size:1.2rem}
+.noe-feature .noe-symbol{align-self:center;display:grid;place-items:center;width:110px;height:110px;font-size:4.1rem;margin:5px auto}
+.noe-feature .noe-feature-desc{margin-top:auto;color:#907477;font-size:.85rem}
+.noe-symbol{display:inline-grid;place-items:center;flex:none}
+.noe-panel{padding:20px;margin:18px 0;border:1px solid #efd8dd;background:#fff;border-radius:17px;scroll-margin-top:16px}
+.noe-panel-heading{display:flex;align-items:center;gap:12px}
+.noe-panel-heading .noe-symbol{font-size:2.1rem}
+.noe-panel-heading h2{margin:0}
+.noe-muted,.noe-progress{color:#86696e;font-size:.91rem}
+.noe-alert-line{border-left:3px solid #d18c9f;background:#fff8f8;padding:10px 12px;margin:10px 0}
+.noe-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.noe-checks label{display:flex;align-items:center;gap:10px;padding:11px;background:#fffaf8;border:1px solid var(--border);border-radius:11px;cursor:pointer}
+.noe-checks input,.noe-sound-option input{width:18px;height:18px;accent-color:#b65c7c}
+.noe-sound-option{display:flex;gap:10px;align-items:center;margin:15px 0}
+.student-slot .card{background:#fffaf9}
+#student-events li.card{background:#fff7f8}
+@media(max-width:1190px){.noe-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.noe-welcome{padding-right:170px}.noe-welcome>.noe-symbol{width:120px;height:120px;font-size:4rem}}
+@media(max-width:850px){.layout{grid-template-columns:185px minmax(0,1fr)}.noe-welcome{padding:24px 18px}.noe-welcome>.noe-symbol{display:none}.noe-checks{grid-template-columns:1fr}main{padding:16px}}
+/* NOE_PUBLIC_DESIGN_END */
+
