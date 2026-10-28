@@ -455,6 +455,7 @@ function renderAiConnection() {
       el('p', { className: 'muted', text: '이 점검은 사건 설명을 실행하지 않았습니다. 실제 사건 설명의 근거와 결과는 보안 기록에서 별도로 확인하세요.' }));
   }
   renderStudent('aiConnection');
+  renderNoeQuickConnect();
 }
 
 function cancelAiCheck({ reset = false } = {}) {
@@ -547,6 +548,143 @@ function renderAiConnect() {
     s.reason ? el('p', { className: 'muted', text: `상태 코드: ${s.reason}` }) : null,
     appConnectInvalidated && s.phase === 'idle' ? el('p', { testid: 'ai-connect-invalidated', className: 'muted', text: '계정 연결이 바뀌어 이전 AI 앱 승인 표시를 화면에서 지웠습니다. 서버의 앱 권한을 취소한 것은 아닙니다. 필요하면 「AI 연결 시작」을 직접 눌러 다시 진행하세요.' }) : null,
   );
+  renderNoeQuickConnect();
+}
+
+
+// ---------- One primary action per AI connection step ----------
+// This UI delegates to existing authenticated controllers. Never skips external
+// account/app consent, auto-retries an ambiguous response, or stores secrets.
+function setupNoeQuickConnect(){
+  const title=document.getElementById('ai-connect-title');
+  if(!title||document.getElementById('noe-ai-quick'))return;
+  const section=document.createElement('section');
+  section.id='noe-ai-quick';
+  section.className='noe-ai-quick';
+  const heading=document.createElement('h3');
+  heading.textContent='AI 간편 연결';
+  const stage=document.createElement('p');
+  stage.id='noe-ai-quick-stage';
+  stage.setAttribute('role','status');
+  stage.setAttribute('aria-live','polite');
+  const actions=document.createElement('div');
+  actions.className='noe-ai-quick-actions';
+  const primary=document.createElement('button');
+  primary.id='noe-ai-quick-primary';
+  primary.type='button';
+  primary.className='btn noe-ai-quick-primary';
+  primary.disabled=true;
+  const approve=document.createElement('a');
+  approve.id='noe-ai-quick-approve';
+  approve.className='btn btn-link';
+  approve.target='_blank';
+  approve.rel='noopener noreferrer';
+  approve.referrerPolicy='no-referrer';
+  approve.textContent='공식 승인 페이지 열기';
+  approve.hidden=true;
+  const note=document.createElement('p');
+  note.className='muted';
+  note.textContent='계정·AI 앱 승인은 공식 포털에서 직접 해야 합니다. 이 버튼은 기존 연결 절차를 안내하며 인증을 우회하지 않습니다.';
+  actions.append(primary,approve);
+  section.append(heading,stage,actions,note);
+  title.insertAdjacentElement('afterend',section);
+
+  primary.addEventListener('click',()=>{
+    const current=primary.dataset.step;
+    const action={
+      'native-start':'native-login-start',
+      'native-verify':'native-login-redeem',
+      'native-check':'native-login-check',
+      'app-start':'ai-connect-start',
+      'app-verify':'ai-connect-finish',
+      'app-check':'ai-connect-status',
+      'model-check':'ai-connect-check'
+    }[current];
+    if(!action)return;
+    const button=document.getElementById(action);
+    if(!(button instanceof HTMLButtonElement)||button.disabled||button.hidden){
+      stage.textContent='현재 연결 단계가 변경됐습니다. 연결 상태를 다시 확인하세요.';
+      renderNoeQuickConnect();
+      return;
+    }
+    primary.disabled=true;
+    button.click(); // original controller owns API, errors, deadlines, and consent checks
+  });
+  renderNoeQuickConnect();
+}
+
+function renderNoeQuickConnect(){
+  const primary=document.getElementById('noe-ai-quick-primary');
+  const stage=document.getElementById('noe-ai-quick-stage');
+  const approve=document.getElementById('noe-ai-quick-approve');
+  if(!primary||!stage||!approve)return;
+  const native=aiConnectModule&&nativeLogin
+    ?aiConnectModule.nativeLoginView(nativeLogin.state,Date.now()):null;
+  const ai=aiConnect?.state;
+  const check=state.aiConnection;
+  let step='',label='',message='',link=null;
+  const waiting=['starting','redeeming','checking','cancelling','finishing'];
+  if(!native){
+    label='연결 준비 중';
+    message=aiConnectLoadFailed?'연결 모듈을 준비할 수 없습니다. 앱 서버와 계정 연결 구성을 확인하세요.':'연결 기능을 준비하는 중입니다.';
+  } else if(native.phase==='awaiting_approval'){
+    step='native-verify';label='계정 승인 후 연결 확인';
+    message='1/3 · 공식 포털에서 계정을 직접 승인한 다음 이 버튼을 누르세요. 확인 번호는 아래 원본 연결 카드에 표시됩니다.';
+    if(native.approvalUrl&&aiConnectModule.validNativeApprovalUrl(native.approvalUrl))
+      link=native.approvalUrl;
+  }else if(native.phase==='unknown'){
+    step=native.canCheck?'native-check':'';
+    label='계정 연결 결과 다시 확인';
+    message='계정 연결 결과가 불확실합니다. 새 요청을 만들기 전에 상태를 직접 확인하세요.';
+  }else if(waiting.includes(native.phase)){
+    label='계정 연결 처리 중';
+    message='계정 연결 응답을 확인하는 중입니다. 중복 요청하지 않습니다.';
+  }else if(native.phase!=='connected'){
+    step=native.canStart?'native-start':'';
+    label='AI 간편 연결 시작';
+    message='1/3 · 계정 연결을 시작합니다. 수업 서버의 계정 연결 기능이 설정돼 있어야 합니다.';
+  }else if(!ai){
+    label='AI 앱 연결 준비 중';
+    message='계정 연결을 확인했습니다. AI 앱 연결 기능을 준비하는 중입니다.';
+  }else if(ai.phase==='awaiting_approval'){
+    step='app-verify';label='AI 앱 승인 후 연결 확인';
+    message='2/3 · 공식 Workbench에서 같은 확인 번호를 확인하고 AI 앱 사용을 직접 승인하세요.';
+    if(ai.approvalUrl&&ai.connectionId&&aiConnectModule.validApprovalUrl(ai.approvalUrl,ai.connectionId))
+      link=ai.approvalUrl;
+  }else if(ai.phase==='unknown'){
+    step=ai.connectionId?'app-check':'';
+    label='AI 앱 승인 결과 다시 확인';
+    message='AI 앱 승인 결과가 불확실합니다. 상태 확인 전에는 연결로 보지 않습니다.';
+  }else if(waiting.includes(ai.phase)){
+    label='AI 앱 승인 처리 중';
+    message='Workbench 승인 결과를 확인 중입니다. 중복 발급이나 재시도를 하지 않습니다.';
+  }else if(ai.phase!=='connected'){
+    step='app-start';label='AI 앱 승인 시작';
+    message='2/3 · 계정은 연결됐습니다. AI 앱 이용 권한을 요청합니다.';
+  }else if(check.status==='loading'){
+    label='모델 응답 점검 중';
+    message='3/3 · 현재 승인된 계정의 AI 모델 응답을 검사 중입니다.';
+  }else if(check.status==='ok'&&check.meta?.mode!=='demo'&&check.data?.audienceAuthorization!=='test'){
+    label='AI 연결 점검 완료';
+    message='3/3 · 모델 응답 점검에 성공했습니다. 실제 사건 설명의 성공은 보안 기록에서 별도 확인합니다.';
+  }else{
+    step='model-check';label='AI 모델 응답 점검';
+    message=check.status==='error'
+      ?'3/3 · 모델 연결 점검에 실패했습니다. 아래 오류와 권한을 확인한 다음 직접 다시 점검하세요.'
+      :'3/3 · AI 앱 연결이 확인됐습니다. 모델 응답을 직접 점검하세요.';
+    if(check.status==='ok'){
+      message='3/3 · 시험/예제 모델 응답입니다. 실제 운영 연결 성공으로 보지 않습니다.';
+    }
+  }
+  stage.textContent=message;
+  primary.textContent=label;
+  primary.dataset.step=step;
+  primary.disabled=!step;
+  approve.hidden=!link;
+  if(link){
+    approve.href=link;
+    approve.textContent=native?.phase==='awaiting_approval'?'ALEPH 계정 승인 페이지 열기':'Workbench 앱 승인 페이지 열기';
+  }else approve.removeAttribute('href');
 }
 
 // ---------- 계정 연결 확인(native 로그인) ----------
@@ -596,6 +734,7 @@ function renderNativeLogin() {
     view && view.phase === 'connected' ? el('dl', { className: 'kv' }, [el('dt', { text: '연결 확인 기한' }), el('dd', { testid: 'native-login-until', text: until })]) : null,
     view && view.reason ? el('p', { className: 'muted', text: `상태 코드: ${view.reason}` }) : null,
   );
+  renderNoeQuickConnect();
 }
 
 async function loadConnectModule() {
@@ -1330,6 +1469,7 @@ async function loadAll() {
 
 function init() {
   setupNav();
+  setupNoeQuickConnect();
   $('refresh').addEventListener('click', () => loadAll());
   $('diag-load').addEventListener('click', () => loadDiagnostics());
   $('diag-copy').addEventListener('click', () => copyDiagnostics());
