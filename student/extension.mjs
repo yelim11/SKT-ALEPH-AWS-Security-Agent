@@ -19,7 +19,7 @@ function addFinalWeekCharacter(root, slot) {
   const heading = document.createElement('div');
   heading.className = 'notice';
   const title = document.createElement('h3');
-  title.textContent = symbol + ' ' + name + ' · ' + topic;
+  title.textContent = slot === 'status' ? topic : symbol + ' ' + name + ' · ' + topic;
   const source = document.createElement('span');
   source.className = 'tag tag-student';
   source.textContent = '학생 테마 · 개인 사용';
@@ -32,17 +32,17 @@ function addPcReadOnlyAvailability(root, mode) {
   const block = document.createElement('section');
   block.className = 'card';
   const title = document.createElement('h3');
-  title.textContent = '🖥️ 내 PC 상태 · 측정 연결 점검';
+  title.textContent = '내 PC 상태 · 측정 연결 점검';
   block.appendChild(title);
   const desc = document.createElement('p');
   desc.textContent = '이 학생 화면에는 PC 실측 응답이 전달되지 않았습니다. 아래 수치는 예시나 측정 결과가 아닙니다.';
   block.appendChild(desc);
   const items = [
-    ['💗 모몽가 · CPU 사용률', '%'],
-    ['🌰 쿠리만쥬 · 메모리 사용량', 'MB'],
-    ['🌼 시사 · 디스크 남은 공간', 'GB'],
-    ['🦦 랏코 · 네트워크 구성/방화벽', '설정/상태'],
-    ['🦀 카니 · Windows System/Application 경고·오류 건수', '건'],
+    ['CPU 사용률', '%'],
+    ['메모리 사용량', 'MB'],
+    ['디스크 남은 공간', 'GB'],
+    ['네트워크 구성/방화벽', '설정/상태'],
+    ['Windows System/Application 경고·오류 건수', '건'],
   ];
   const list = document.createElement('ul');
   for (const [label, unit] of items) {
