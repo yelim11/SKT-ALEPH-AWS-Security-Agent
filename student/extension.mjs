@@ -609,7 +609,7 @@ function installNoePrivatePages() {
   sound.addEventListener('change',()=>{try{localStorage.setItem(soundKey,sound.checked?'on':'off');}catch{}});
   settingsRow.append(sound,el('span','','클릭 효과음 사용'));settings.append(settingsRow);
   settings.append(el('p','noe-footnote','이 설정은 이 브라우저에만 저장돼요. 보안 기록·연결 상태·실제 PC 측정 결과에는 영향을 주지 않습니다.'),
-    el('p','noe-footnote','원작 캐릭터 이미지와 업로드 글꼴은 개인 PC에서만 사용하며 공개 저장소에는 포함하지 않습니다.'));
+    el('p','noe-footnote','일부 캐릭터 이미지는 공개 작업 브랜치에 포함되어 있습니다. 대롱체 글꼴 파일은 포함되지 않았습니다.'));
 
   // Enter with only the Home page visible. No long scroll of other pages.
   showPage('home');
