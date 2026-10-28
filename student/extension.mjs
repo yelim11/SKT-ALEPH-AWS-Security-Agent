@@ -81,7 +81,144 @@ function addPcReadOnlyAvailability(root, mode) {
   root.appendChild(block);
 }
 
+
+// NOE_PERSONAL_DESIGN_BEGIN — local UI only; does not change SDP/auth/action APIs.
+// Copyrighted character images and font files are deliberately excluded from public Git.
+function installNoeDesign() {
+  const byId = id => document.getElementById(id);
+  if (byId('noe-welcome')) return;
+  const node = (tag, cls = '', label = '') => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (label) n.textContent = label;
+    return n;
+  };
+  const art = (symbol, title) => {
+    const n = node('span','noe-symbol',symbol);
+    n.setAttribute('aria-hidden','true');
+    n.title=title;
+    return n;
+  };
+  const main = byId('view-protection');
+  const nav = byId('nav');
+  if (!main || !nav) return;
+  const welcome = node('section','noe-welcome');
+  welcome.id='noe-welcome';
+  welcome.append(
+    node('p','noe-overline','노예 · 개인 보안 일기장'),
+    node('h2','', '오늘의 보안도 차근차근 살펴볼까?'),
+    node('p','noe-muted','보안 기록과 내 PC 상태를 확인하는 공간'),
+    node('p','noe-disclaimer','실제 측정값과 예제 자료는 각각 구분해 표시합니다.')
+  );
+  welcome.append(art('🐰','우사기'));
+  const tabs={home:byId('tab-protection'),events:byId('tab-records'),apps:byId('tab-apps')};
+  const jump=(tab,target)=>{
+    if (!tab) return;
+    tab.click();
+    if(target)requestAnimationFrame(()=>{
+      const el=byId(target);
+      if (el)el.scrollIntoView({block:'start',behavior:'auto'});
+    });
+  };
+  const soundKey='noe-personal-click-sound-v1';
+  let audioCtx;
+  const beep=(frequency)=>{
+    try{
+      if(localStorage.getItem(soundKey)==='off')return;
+      const C=window.AudioContext||window.webkitAudioContext;
+      if(!C)return;
+      audioCtx=audioCtx||new C();
+      const osc=audioCtx.createOscillator(),g=audioCtx.createGain(),t=audioCtx.currentTime;
+      osc.type='sine';osc.frequency.setValueAtTime(frequency,t);
+      g.gain.setValueAtTime(0.012,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.09);
+      osc.connect(g);g.connect(audioCtx.destination);osc.start(t);osc.stop(t+0.09);
+    }catch{}
+  };
+  const cards=node('div','noe-card-grid');
+  const features=[
+    ['보안 기록','종류별 필터와 상세 근거','📓','수첩 든 치이카와',tabs.events,'student-events',523],
+    ['내 PC 상태','실측 지원 여부 확인','🐱','하치와레',tabs.home,'student-status',587],
+    ['위험 알림','SDP·XDR·Windows 상태','🐶','귀 늘어진 캐릭터',tabs.home,'noe-alerts',649],
+    ['오늘의 점검','직접 확인한 항목 기록','🐰','세 친구',tabs.home,'noe-checklist',719]
+  ];
+  for(const [name,detail,symbol,alt,tab,target,tone] of features){
+    const b=node('button','noe-feature');b.type='button';
+    b.append(node('strong','noe-feature-title',name),art(symbol,alt),node('span','noe-feature-desc',detail));
+    b.addEventListener('click',()=>{beep(tone);jump(tab,target);});
+    cards.append(b);
+  }
+  const h1=main.querySelector('h1');
+  if (h1){h1.textContent='홈';h1.insertAdjacentElement('afterend',welcome);welcome.insertAdjacentElement('afterend',cards);}
+  else main.prepend(welcome,cards);
+  if(tabs.home)tabs.home.textContent='홈';
+  const brand=document.querySelector('.brand-name');
+  if(brand){brand.textContent='노예';brand.append(node('small','','보안 Agent · 개인 개발용'));}
+  document.title='노예 · 보안 일기장';
+  const extraNav=node('div','noe-extra-nav');extraNav.id='noe-extra-nav';
+  extraNav.setAttribute('role','group');extraNav.setAttribute('aria-label','개인 기능 메뉴');
+  nav.insertAdjacentElement('afterend',extraNav);
+  const extraMenu=[
+    ['내 PC 상태','🐱',tabs.home,'student-status'],
+    ['위험 알림','🐶',tabs.home,'noe-alerts'],
+    ['오늘의 점검','🐰',tabs.home,'noe-checklist'],
+    ['설정','⭐',tabs.home,'noe-settings']
+  ];
+  for (const [name,symbol,tab,target] of extraMenu){
+    const b=node('button','noe-nav-extra');b.type='button';
+    b.append(art(symbol,name),node('span','',name));
+    b.addEventListener('click',()=>{beep(550);jump(tab,target);});
+    extraNav.append(b);
+  }
+  const panel=(id,title,symbol,description)=>{
+    const p=node('section','noe-panel');p.id=id;
+    const header=node('div','noe-panel-heading');
+    header.append(art(symbol,title),node('h2','',title));p.append(header,node('p','noe-muted',description));
+    main.append(p);return p;
+  };
+  const alerts=panel('noe-alerts','위험 알림','🐶','로컬 정보 확인과 실제 탐지 결과는 서로 다릅니다.');
+  for(const text of [
+    'SDP: 실제 운영 서버 연결 여부 미확인 · 제공 화면의 연결 표시를 확인하세요.',
+    'XDR: 운영 원천 탐지 결과 미확인 · 예제 기록을 실제 공격 탐지라고 표시하지 않습니다.',
+    'Windows System/Application 경고·오류: 조회 미연결 · 경고 건수는 공격 탐지 건수가 아닙니다.'
+  ])alerts.append(node('p','noe-alert-line',text));
+  const checks=panel('noe-checklist','오늘의 점검','🐰','이 목록은 내가 확인했다는 기록이며 검사 성공을 뜻하지 않습니다.');
+  const checkTasks=[
+    '보안 기록 종류 필터 확인','SDP 연결 상태 확인','CPU·메모리·디스크 측정 가능 여부 확인',
+    'Windows 로그·방화벽 조회 가능 여부 확인','미확인 항목과 이유 확인'
+  ];
+  const data=(()=>{try{const a=JSON.parse(localStorage.getItem('noe-checklist-v1')||'{}');return a&&typeof a==='object'?a:{};}catch{return {};}})();
+  const form=node('div','noe-checks'),inputs=[],progress=node('p','noe-progress');
+  progress.setAttribute('role','status');progress.setAttribute('aria-live','polite');
+  const redraw=()=>{progress.textContent='직접 확인 표시: '+inputs.filter(x=>x.checked).length+' / '+inputs.length+'개 · 보안 상태 판정 아님';};
+  checkTasks.forEach((name,i)=>{
+    const l=node('label'),input=document.createElement('input');
+    input.type='checkbox';input.checked=Boolean(data[i]);inputs.push(input);
+    l.append(input,node('span','',name));form.append(l);
+    input.addEventListener('change',()=>{
+      const out={};inputs.forEach((x,j)=>{if(x.checked)out[j]=new Date().toISOString();});
+      try{localStorage.setItem('noe-checklist-v1',JSON.stringify(out));}catch{}
+      redraw();
+    });
+  });
+  checks.append(form,progress);
+  const clear=node('button','btn','체크 기록 초기화');clear.type='button';
+  clear.addEventListener('click',()=>{
+    inputs.forEach(x=>x.checked=false);
+    try{localStorage.removeItem('noe-checklist-v1');}catch{}
+    redraw();
+  });checks.append(clear);redraw();
+  const settings=panel('noe-settings','개인 설정','⭐','테마·소리 설정은 이 브라우저에서만 저장됩니다.');
+  const label=node('label','noe-sound-option'),sound=document.createElement('input');
+  sound.type='checkbox';
+  try{sound.checked=localStorage.getItem(soundKey)!=='off';}catch{sound.checked=true;}
+  sound.addEventListener('change',()=>{try{localStorage.setItem(soundKey,sound.checked?'on':'off');}catch{}});
+  label.append(sound,node('span','','클릭 효과음 사용'));
+  settings.append(label,node('p','noe-muted','캐릭터 사진·대롱체 글꼴은 개인 PC의 비공개 테마 파일에서만 사용하세요.'));
+}
+// NOE_PERSONAL_DESIGN_END
+
 export function createStudentView() {
+  try { installNoeDesign(); } catch { /* theme must not break security UI */ }
   return {
     renderIdentity({ me, devices, sessions }) {
       // 제공 UI는 반환한 DOM으로 학생 칸을 통째로 교체한다.
