@@ -216,6 +216,7 @@ function installNoePrivatePages() {
     recordTab.classList.toggle('noe-current',page==='records');
     appTab.classList.toggle('noe-current',page==='apps');
     if((page==='pc'||page==='alerts')&&!pcLoaded&&!pcLoading)readLocalPc();
+    if(page==='checks')synchronizeCheckDay();
     window.scrollTo({top:0,behavior:'auto'});
   }
   const addNav=(id,name,symbol,page)=>{
@@ -542,7 +543,7 @@ function installNoePrivatePages() {
   let saved={};try{const s=JSON.parse(localStorage.getItem(storageKey)||'{}');if(s&&typeof s==='object'&&!Array.isArray(s))saved=s;}catch{}
   const wrap=el('div','noe-checks'),progress=el('p','noe-footnote');
   progress.setAttribute('role','status');progress.setAttribute('aria-live','polite');
-  const inputs=[],checkChips=[];
+  const inputs=[],checkChips=[],checkTimes=[];
   const checkVisual=el('section','noe-check-visual');
   const checkTop=el('div','noe-check-top');
   const checkPercent=el('strong','noe-check-percent','0%');
@@ -569,7 +570,9 @@ function installNoePrivatePages() {
     if(box.checked&&typeof saved[index]==='string')time.textContent='사용자 체크 시각: '+new Date(saved[index]).toLocaleString('ko-KR');
     const chip=el('span','noe-check-chip');checkChips.push(chip);
     row.append(box,description,chip,time);wrap.appendChild(row);inputs.push(box);
+    checkTimes.push(time);
     box.addEventListener('change',()=>{
+      synchronizeCheckDay();
       const state={};inputs.forEach((x,i)=>{if(x.checked)state[i]=(i===index&&x.checked)?new Date().toISOString():(saved[i]||new Date().toISOString());});
       saved=state;try{localStorage.setItem(storageKey,JSON.stringify(state));}catch{}
       time.textContent=box.checked?'사용자 체크 시각: '+new Date(saved[index]).toLocaleString('ko-KR'):'';
@@ -577,12 +580,29 @@ function installNoePrivatePages() {
     });
   });
   checks.append(checkVisual,wrap,progress);
-  const reset=el('button','btn','체크 기록 초기화');reset.type='button';
+  function synchronizeCheckDay(){
+    const today='noe-personal-checks-v2-'+localDay();
+    if(storageKey===today)return;
+    storageKey=today;
+    saved={};
+    try{const old=JSON.parse(localStorage.getItem(storageKey)||'{}');
+      if(old&&typeof old==='object'&&!Array.isArray(old))saved=old;
+    }catch{}
+    inputs.forEach((x,i)=>{
+      x.checked=Boolean(saved[i]);
+      const date=typeof saved[i]==='string'?new Date(saved[i]):null;
+      checkTimes[i].textContent=date&&!Number.isNaN(date.getTime())
+        ?'사용자 체크 시각: '+date.toLocaleString('ko-KR'):'';
+    });
+    redraw();
+  }
+  const reset=el('button','btn','오늘 체크 초기화');reset.type='button';
   reset.addEventListener('click',()=>{
+    synchronizeCheckDay();
     inputs.forEach(input=>input.checked=false);
     saved={};try{localStorage.removeItem(storageKey);}catch{}
     wrap.querySelectorAll('.noe-checked-time').forEach(t=>t.textContent='');redraw();
-  });checks.append(reset);redraw();
+  });checks.append(reset,el('p','noe-footnote','직접 확인한 내용은 날짜별로 저장되고 다음 날짜에는 별도 목록으로 시작합니다.'));redraw();
 
   const settingsRow=el('label','noe-setting-row'),sound=document.createElement('input');sound.type='checkbox';
   try{sound.checked=localStorage.getItem(soundKey)!=='off';}catch{sound.checked=true;}
