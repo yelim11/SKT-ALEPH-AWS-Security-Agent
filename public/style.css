@@ -309,3 +309,52 @@ h1{font-size:1.8rem;margin:0 0 12px}h2{font-size:1.22rem}
 /* Read-only Windows local diagnostics presentation. */
 .noe-metric .noe-value{font-variant-numeric:tabular-nums}
 .noe-metric .noe-footnote,.noe-alert-line{overflow-wrap:anywhere}
+
+
+/* NOE_CHARTS_2026 · accessible flat-color charts. No inferred or synthetic measurements. */
+.noe-metric[data-tone="rose"]{background:#fff2f3;border-color:#f4dde4}
+.noe-metric[data-tone="blue"]{background:#eff7fc;border-color:#dfeef6}
+.noe-metric[data-tone="mint"]{background:#f1f9f3;border-color:#deecdf}
+.noe-metric .noe-value{font-size:1.5rem;line-height:1.3;margin-bottom:12px;font-variant-numeric:tabular-nums}
+.noe-bar{width:100%;height:12px;border-radius:999px;overflow:hidden;background:#ecdfe3;display:block}
+.noe-bar-fill{height:100%;width:0%;border-radius:inherit;display:block;background:#d18a9c;transition:width 280ms ease}
+.noe-bar-blue{background:#dbeaf7}.noe-bar-blue .noe-bar-fill{background:#72a9dd}
+.noe-bar-mint{background:#dfefe5}.noe-bar-mint .noe-bar-fill{background:#72b993}
+.noe-bar-rose{background:#f1dfe5}.noe-bar-rose .noe-bar-fill{background:#d38ea4}
+.noe-bar.noe-bar-unknown{background:#eae5e7}
+.noe-bar.noe-bar-unknown .noe-bar-fill{width:0!important}
+.noe-meter-hint{margin:8px 0 5px;font-size:.83rem;color:#846e74}
+.noe-log-chart{margin-top:2px}
+.noe-chart-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:16px}
+.noe-chart-head h2{margin:0}.noe-chart-head p{margin:0}
+.noe-event-line{display:grid;grid-template-columns:minmax(130px,1fr) minmax(110px,2.5fr) minmax(65px,.7fr);align-items:center;gap:13px;margin:12px 0}
+.noe-event-name{color:#59484a;font-size:.92rem}
+.noe-event-track{height:14px;border-radius:7px;background:#f2eded;overflow:hidden}
+.noe-event-fill{display:block;height:100%;width:0%;border-radius:7px;background:#e58d88;transition:width 280ms ease}
+.noe-event-amber .noe-event-fill{background:#e8c16d}
+.noe-event-track.noe-bar-unknown{background:#ece8e8}
+.noe-event-track.noe-bar-unknown .noe-event-fill{width:0!important}
+.noe-event-count{text-align:right;font-size:.92rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.noe-alert-visual{margin:0 0 22px}
+.noe-alert-visual>h2{margin-bottom:6px}
+.noe-alert-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:15px 0}
+.noe-alert-summary{background:#fff;border:1px solid #eddae0;border-radius:17px;min-height:144px;padding:18px 15px}
+.noe-alert-summary:nth-child(1){background:#eff7fb;border-color:#e0edf6}
+.noe-alert-summary:nth-child(2){background:#fff7e9;border-color:#f1e8ce}
+.noe-alert-summary:nth-child(3){background:#fff0f2;border-color:#f1dce1}
+.noe-alert-summary h3{font-size:1.06rem;margin-bottom:10px}
+.noe-alert-chip{display:inline-block;background:#fff;padding:5px 11px;border:1px solid #e9dadd;border-radius:999px;font-size:.86rem;color:#886672}
+.noe-alert-summary[data-tone="observed"] .noe-alert-chip{color:#386b52;background:#edf7ef;border-color:#cfe5d5}
+.noe-alert-summary .noe-muted{margin:13px 0 0}
+.noe-fact-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.noe-fact{background:#fff;border:1px solid #ecdee0;border-radius:12px;padding:13px}
+.noe-fact h3{margin:0 0 5px;font-size:.97rem}.noe-fact p{margin:0;font-size:.81rem;color:#806d73}
+.noe-check-visual{padding:20px;margin:0 0 20px;border:1px solid #d8e8df;border-radius:17px;background:#f1f9f3}
+.noe-check-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:13px}
+.noe-check-percent{font-size:2rem;color:#39775b;font-variant-numeric:tabular-nums}
+.noe-check-visual .noe-bar{height:15px}
+.noe-check-visual .noe-footnote{margin:12px 0 0}
+.noe-check-chip{display:inline-flex;padding:4px 9px;border-radius:999px;border:1px solid #e5d8de;background:#f7f3f5;color:#876b73;font-size:.76rem;white-space:nowrap;margin-left:auto}
+.noe-check-chip[data-state="marked"]{background:#e9f6ed;border-color:#cde5d3;color:#3e7f60}
+@media(max-width:1000px){.noe-alert-grid,.noe-fact-grid{grid-template-columns:1fr}.noe-chart-head{display:block}.noe-event-line{grid-template-columns:minmax(95px,1fr) minmax(80px,1.3fr) minmax(57px,.6fr);gap:7px}}
+@media(prefers-reduced-motion:reduce){.noe-bar-fill,.noe-event-fill{transition:none}}
