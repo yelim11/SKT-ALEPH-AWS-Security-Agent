@@ -377,3 +377,12 @@ h1{font-size:1.8rem;margin:0 0 12px}h2{font-size:1.22rem}
 #noe-sidebar-footer .noe-nav-extra:hover{background:#fde9ef;}
 #noe-sidebar-footer .noe-nav-extra[aria-current="page"]{background:#f9e2e9;color:#9b5070;font-weight:bold;}
 @media(max-width:850px){#noe-sidebar-footer .noe-nav-extra{font-size:.93rem;gap:7px;}}
+
+/* Functional AI page and verified resource indicators */
+#noe-page-ai>.noe-panel{background:#fff8f7;border-color:#eddce1}
+#noe-page-ai>.card{max-width:none}
+#noe-page-ai .connect-layout{flex-wrap:wrap}
+#noe-page-ai .row{margin:10px 0}
+.noe-alert-summary[data-tone="demo"] .noe-alert-chip{color:#866230;background:#fff8e9;border-color:#eedebe}
+.noe-alert-summary[data-tone="unknown"] .noe-alert-chip{color:#795d68;background:#f8f3f5;border-color:#ebdce0}
+@media(max-width:900px){#noe-page-ai .connect-art{flex-basis:88px}#noe-page-ai .connect-art img{width:88px}}

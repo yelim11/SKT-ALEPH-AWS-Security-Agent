@@ -44,7 +44,12 @@ function addPcReadOnlyAvailability(root, mode) {
 }
 
 
-// NOE_PRIVATE_SHELL_BEGIN — local personal theme; UI only, no new security/PC network requests.
+// Personal dashboard summaries read ONLY the validated inputs of the existing student renderers.
+// No re-fetching of private events and no persistence of any security evidence.
+let noeUpdateEvents=null;
+let noeUpdateStatus=null;
+
+// NOE_PRIVATE_SHELL_BEGIN — personal theme; no SDP/auth/action changes.
 function installNoePrivatePages() {
   const $ = id => document.getElementById(id);
   if ($('noe-page-home')) return;
@@ -120,12 +125,31 @@ function installNoePrivatePages() {
   const pc = makePage('내 PC 상태','hachi-glasses','Windows CPU·메모리·디스크·방화벽·이벤트를 읽기 전용으로 조회합니다.','pc');
   const alerts = makePage('위험 알림','rakko','SDP·XDR·Windows 경고와 조회 실패는 서로 다르게 표시합니다.','alerts');
   const checks = makePage('오늘의 점검','kuri','직접 확인한 항목만 기록합니다. 보안 점수나 검사 성공을 뜻하지 않아요.','checks');
+  const ai = makePage('AI 연결','usagi','계정 확인 · AI 앱 승인 · 모델 연결 점검','ai');
   const settings = makePage('설정','blackstar','개인용 테마 설정 및 사용 안내','settings');
   const originalDisclosure = document.createElement('details');
   originalDisclosure.id = 'noe-provided-disclosure';
   originalDisclosure.className = 'noe-disclosure';
   originalDisclosure.append(el('summary','','기존 보안 Agent 상세 정보 · 계정/기기/AI/취약점 펼쳐보기'), original);
   pc.appendChild(originalDisclosure);
+
+  // Move the original trusted controls without cloning any nodes or adding auth APIs.
+  // Their IDs and existing event handlers remain unchanged.
+  const aiIntro=el('section','noe-panel');
+  aiIntro.append(
+    el('h2','','AI 연결 순서'),
+    el('p','noe-muted','① 계정 연결 → ② AI 앱 승인 → ③ API 연결 점검 → ④ 보안 기록에서 사건 선택 후 AI 설명'),
+    el('p','noe-footnote','PC 사용량과 Windows 오류 확인에는 AI 연결이 필요하지 않습니다. AI 연결 성공과 사건 설명 성공도 서로 다릅니다.'),
+    el('p','noe-footnote','비밀번호와 API 키를 이 화면에 직접 입력하지 않습니다. 예제 모드에서는 실제 AI 이용 권한이 확인되지 않습니다.')
+  );
+  ai.append(aiIntro);
+  for(const titleId of ['ai-connect-title','ai-connection-title','student-ai-connection-title']){
+    const card=$(titleId)?.closest('.card');
+    if(card)ai.append(card);
+  }
+  const goToRecords=el('button','btn','AI 사건 설명: 보안 기록으로 이동');
+  goToRecords.type='button';goToRecords.addEventListener('click',()=>showPage('records'));
+  ai.append(goToRecords);
 
   // Keep the actual original student state renderer prominently visible in PC view.
   const status = $('student-status');
@@ -158,7 +182,7 @@ function installNoePrivatePages() {
     }catch { /* Optional sound may be unavailable. */ }
   }
 
-  const subpages = { home,pc,alerts,checks,settings };
+  const subpages = { home,pc,alerts,checks,ai,settings };
   const sideColumn=nav.closest('.sidebar');
   if(!sideColumn)return;
   const extraNav=el('div','noe-extra-nav');
@@ -175,7 +199,7 @@ function installNoePrivatePages() {
   const navExtras=[];
   let navigating=false;
   function showPage(page) {
-    if (!['home','records','pc','alerts','checks','settings','apps'].includes(page))return;
+    if (!['home','records','pc','alerts','checks','ai','settings','apps'].includes(page))return;
     // The provided frontend owns its three top-level panels. We only invoke
     // the existing button handlers; never change its auth/network lifecycle.
     navigating=true;
@@ -204,6 +228,7 @@ function installNoePrivatePages() {
   addNav('noe-nav-pc','내 PC 상태','hachi-glasses','pc');
   addNav('noe-nav-alerts','위험 알림','rakko','alerts');
   addNav('noe-nav-checks','오늘의 점검','kuri','checks');
+  addNav('noe-nav-ai','AI 연결','usagi','ai');
   addNav('noe-nav-settings','설정','blackstar','settings');
   homeTab.textContent='홈';
   const brand=document.querySelector('.brand-name');
@@ -243,10 +268,13 @@ function installNoePrivatePages() {
   const quickCards=[
     ['최근 보안 기록','기록은 보안 기록 메뉴에서 확인하세요. 수집되지 않았다면 확인 불가입니다.','blackstar'],
     ['내 PC 상태','Windows 로컬 사용량과 디스크 조회','shisa'],
-    ['연결 상태','SDP 연결 여부는 상단 연결 상태와 함께 확인','yellowstar']
+    ['연결 상태','Agent 연결 확인 중 · SDP는 별도 확인','yellowstar']
   ];
+  const homeSummary={};
   for(const [name,desc,character] of quickCards){
-    const card=el('section','noe-mini');card.append(art(character),el('h3','',name),el('p','',desc));quick.append(card);
+    const card=el('section','noe-mini'),message=el('p','',desc);
+    card.append(art(character),el('h3','',name),message);quick.append(card);
+    homeSummary[name]=message;
   }
   home.append(quick,el('p','noe-footnote','Windows 자원과 이벤트는 이 PC에서 별도 조회합니다. 실패를 정상이나 0건으로 표시하지 않습니다.'));
 
@@ -406,8 +434,8 @@ function installNoePrivatePages() {
     el('p','noe-muted','연결 확인과 Windows 로컬 기록을 구분해요. 이것은 위협 위험도 점수가 아닙니다.'));
   const alertGrid=el('div','noe-alert-grid'),alertRefs={};
   for(const [key,title,initial,desc,tone] of [
-    ['sdp','SDP 연결','별도 확인 필요','실제 서버 연결 여부는 Agent 제공 화면에서 확인','neutral'],
-    ['xdr','XDR 원천 기록','별도 확인 필요','예제 기록과 실제 탐지 기록은 다릅니다','neutral'],
+    ['sdp','Agent / SDP 연결','상태 확인 전','Agent와 SDP의 운영 연결은 구분해서 확인해야 합니다','neutral'],
+    ['xdr','XDR 원천 기록','기록 조회 전','검증된 최근 기록 조회 결과를 사용합니다','neutral'],
     ['windows','Windows 오류·경고','아직 조회 전','최근 24시간 OS 기록 · 침해 탐지와 별개','unknown']
   ]){
     const card=el('article','noe-alert-summary');
@@ -430,6 +458,55 @@ function installNoePrivatePages() {
   }
   alertVisual.append(factGrid);
   alerts.append(alertVisual);
+  // Updates are driven by the same validated resources already used by the
+  // official event/status renderers. Do not infer a cyber risk score.
+  noeUpdateEvents=({status,mode,data})=>{
+    const {card,chip,explain}=alertRefs.xdr;
+    if(status==='loading'){
+      card.dataset.tone='unknown';chip.textContent='조회 중';
+      explain.textContent='본인 보안 기록을 불러오는 중입니다.';
+      homeSummary['최근 보안 기록'].textContent='보안 기록 조회 중';return;
+    }
+    if(status!=='ok'||!Array.isArray(data)){
+      card.dataset.tone='unknown';chip.textContent='확인 불가';
+      explain.textContent='기록 원천 조회 실패 또는 검증 불가 · 기록 0건으로 판단하지 않습니다.';
+      homeSummary['최근 보안 기록'].textContent='기록을 확인할 수 없습니다.';return;
+    }
+    const count=data.filter(event=>event?.kind==='xdr').length;
+    if(mode==='demo'){
+      card.dataset.tone='demo';chip.textContent='XDR 예제 '+count+'건';
+      explain.textContent='예제 보안 기록 중 XDR '+count+'건 · 실제 탐지가 아닙니다.';
+      homeSummary['최근 보안 기록'].textContent='예제 기록 '+data.length+'건 · 실제 탐지 아님';
+    }else if(mode==='connected'){
+      card.dataset.tone='observed';chip.textContent='조회된 XDR '+count+'건';
+      explain.textContent='이번 조회에서 받은 본인 기록 중 XDR '+count+'건 · 전체 과거 기록이 아닙니다.';
+      homeSummary['최근 보안 기록'].textContent='조회된 최근 본인 기록 '+data.length+'건';
+    }else{
+      card.dataset.tone='unknown';chip.textContent='연결 모드 미확인';
+      explain.textContent='보안 기록이 전달됐지만 원천 연결 상태를 확인하지 못했습니다.';
+      homeSummary['최근 보안 기록'].textContent='원천 연결 상태 확인 불가';
+    }
+  };
+  noeUpdateStatus=({mode})=>{
+    const {card,chip,explain}=alertRefs.sdp;
+    if(mode==='demo'){
+      card.dataset.tone='demo';chip.textContent='예제 모드';
+      explain.textContent='Agent가 예제 자료를 사용합니다. 실제 SDP 연결 성공은 아닙니다.';
+      homeSummary['연결 상태'].textContent='예제 모드 · SDP 미확인';
+    }else if(mode==='disconnected'){
+      card.dataset.tone='unknown';chip.textContent='Agent 미연결';
+      explain.textContent='Agent와 운영 원천 연결을 확인할 수 없습니다.';
+      homeSummary['연결 상태'].textContent='Agent 연결 없음';
+    }else if(mode==='connected'){
+      card.dataset.tone='observed';chip.textContent='Agent 연결 모드';
+      explain.textContent='Agent 연결 모드만 확인됐습니다. SDP 운영 연결은 별도 확인이 필요합니다.';
+      homeSummary['연결 상태'].textContent='Agent 연결 · SDP 별도 확인';
+    }else{
+      card.dataset.tone='unknown';chip.textContent='확인 불가';
+      explain.textContent='현재 Agent 연결 모드를 확인하지 못했습니다.';
+      homeSummary['연결 상태'].textContent='Agent 연결 확인 불가';
+    }
+  };
   const updateWindowsSummary=(events)=>{
     const values=['System','Application'].flatMap(log=>['error','warning'].map(kind=>events?.[log]?.[kind]));
     const ok=values.every(v=>Number.isSafeInteger(v)&&v>=0);
@@ -449,6 +526,14 @@ function installNoePrivatePages() {
   const inspectWindows=el('button','btn','Windows 기록 수치 확인');
   inspectWindows.type='button';inspectWindows.addEventListener('click',()=>showPage('pc'));
   alerts.append(inspectWindows);
+  const alertsRefresh=el('button','btn','알림 정보 다시 조회');
+  alertsRefresh.type='button';
+  alertsRefresh.addEventListener('click',()=>{
+    const refresh=$('refresh');
+    if(refresh && !refresh.disabled)refresh.click();
+    if(!pcLoading)readLocalPc();
+  });
+  alerts.append(alertsRefresh);
 
   const tasks=['보안 기록 필터 확인','SDP 연결 상태 확인','PC 사용량 측정 지원 여부 확인','방화벽·Windows 로그 조회 가능 여부 확인','확인 불가 항목과 이유 확인'];
   const storageKey='noe-personal-checks-v1';
@@ -675,6 +760,7 @@ export function createStudentView() {
       return root;
     },
     renderEvents({ status, mode, data, error }) {
+      if(typeof noeUpdateEvents==='function')noeUpdateEvents({status,mode,data});
       // 제공 UI는 호출 때마다 반환한 DOM으로 학생 영역을 교체한다.
       const root = document.createElement('section');
       addFinalWeekCharacter(root, 'events');
@@ -843,6 +929,7 @@ export function createStudentView() {
       return root;
     },
     renderStatus({ devices, sessions, notifications, diagnostics, mode }) {
+      if(typeof noeUpdateStatus==='function')noeUpdateStatus({mode});
       // 매 호출마다 새 DOM을 만든다. 갱신 후 이전 실패·목록을 남기지 않는다.
       const root = document.createElement('section');
       addFinalWeekCharacter(root, 'status');
