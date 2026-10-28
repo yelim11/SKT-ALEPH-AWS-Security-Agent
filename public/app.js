@@ -603,8 +603,8 @@ function setupNoeQuickConnect(){
     if(!action)return;
     const button=document.getElementById(action);
     if(!(button instanceof HTMLButtonElement)||button.disabled||button.hidden){
-      stage.textContent='현재 연결 단계가 변경됐습니다. 연결 상태를 다시 확인하세요.';
       renderNoeQuickConnect();
+      stage.textContent='간편 연결과 원본 버튼 상태가 일치하지 않습니다. 아래 계정 연결 상태를 확인하고 필요하면 페이지를 새로고침하세요.';
       return;
     }
     primary.disabled=true;
@@ -620,6 +620,7 @@ function renderNoeQuickConnect(){
   if(!primary||!stage||!approve)return;
   const native=aiConnectModule&&nativeLogin
     ?aiConnectModule.nativeLoginView(nativeLogin.state,Date.now()):null;
+  const nativeErrorCode=typeof native?.reason==='string'&&/^[A-Z0-9_]{1,64}$/.test(native.reason)?native.reason:'';
   const ai=aiConnect?.state;
   const check=state.aiConnection;
   let step='',label='',message='',link=null;
@@ -635,7 +636,14 @@ function renderNoeQuickConnect(){
   }else if(native.phase==='unknown'){
     step=native.canCheck?'native-check':'';
     label='계정 연결 결과 다시 확인';
-    message='계정 연결 결과가 불확실합니다. 새 요청을 만들기 전에 상태를 직접 확인하세요.';
+    message='계정 연결 결과가 불확실합니다'+(nativeErrorCode?' ('+nativeErrorCode+')':'')+'. 이미 승인했더라도 성공으로 보지 않으며 새 요청 대신 상태를 직접 확인하세요.';
+  }else if(native.phase==='error'&&nativeErrorCode==='NATIVE_HOST_DISABLED'){
+    step='';label='호스트 연결 설정 필요';
+    message='이 PC에서 ALEPH 계정 연결 호스트가 비활성화되어 있습니다 (NATIVE_HOST_DISABLED). 화면 버튼만으로 연결할 수 없어요. 수업 담당자가 제공한 전용 native 호스트 설정을 확인하고 앱을 해당 설정으로 다시 실행해 주세요. 비밀번호·토큰·설정 내용을 이 화면이나 GitHub에 입력하지 마세요.';
+  }else if(native.phase==='error'){
+    step=native.canStart?'native-start':'';
+    label=step?'계정 연결 다시 시도':'계정 연결 오류 확인';
+    message='계정 연결을 시작하지 못했습니다'+(nativeErrorCode?' ('+nativeErrorCode+')':'')+'. 아래 원본 연결 결과를 확인하세요. 자동으로 재시도하지 않습니다.';
   }else if(waiting.includes(native.phase)){
     label='계정 연결 처리 중';
     message='계정 연결 응답을 확인하는 중입니다. 중복 요청하지 않습니다.';
