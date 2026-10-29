@@ -131,6 +131,8 @@ function installNoePrivatePages() {
   originalDisclosure.id = 'noe-provided-disclosure';
   originalDisclosure.className = 'noe-disclosure';
   originalDisclosure.append(el('summary','','기존 보안 Agent 상세 정보 · 계정/기기/AI/취약점 펼쳐보기'), original);
+  const officialPc=document.getElementById('pc-status');
+  if(officialPc)pc.appendChild(officialPc);
   pc.appendChild(originalDisclosure);
 
   // Move the original trusted controls without cloning any nodes or adding auth APIs.
@@ -297,7 +299,7 @@ function installNoePrivatePages() {
   for(const [key,name,unit,color,hint] of [
     ['cpu','CPU 사용률','%','rose','측정된 사용률'],
     ['memory','메모리 사용량','MiB','blue','전체 메모리 대비 사용량'],
-    ['disk','시스템 디스크 남은 공간','GiB','mint','전체 공간 대비 남은 비율']
+    ['disk','프로젝트 디스크 남은 공간','GiB','mint','전체 공간 대비 남은 비율']
   ]){
     const block=el('section','noe-metric');
     block.dataset.tone=color;
@@ -368,11 +370,28 @@ function installNoePrivatePages() {
     if(pcLoading)return;
     pcLoading=true;pcRefresh.disabled=true;pcResult.textContent='Windows 로컬 상태를 조회하는 중…';
     try{
-      const response=await fetch('/api/local/pc-health',{method:'GET',credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
+      const response=await fetch('/api/pc/status',{method:'GET',credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
       if(!response.ok)throw Error('http');
       const result=await response.json();
       if(result?.ok!==true||!result?.data)throw Error('invalid');
-      const d=result.data;
+      const pc=result.data;
+      if(pc?.schema!=='aleph.on.pc-status.v1'||pc?.source!=='local-pc'||!pc.metrics)throw Error('invalid');
+      const m=pc.metrics;
+      const bytesToMiB=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0?Math.round(v/1048576):null;
+      const bytesToGiB=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0?Math.round(v/1073741824*10)/10:null;
+      const valid=(v)=>typeof v==='number'&&Number.isFinite(v)&&v>=0;
+      const d={supported:true,checkedAt:pc.measuredAt,
+        cpu:{usagePercent:m.cpu?.state==='ok'?m.cpu.usagePercent:null},
+        memory:{usedMiB:m.memory?.state==='ok'?bytesToMiB(m.memory.usedBytes):null,
+          totalMiB:m.memory?.state==='ok'?bytesToMiB(m.memory.totalBytes):null,
+          usagePercent:m.memory?.state==='ok'&&m.memory.totalBytes>0?100*m.memory.usedBytes/m.memory.totalBytes:null},
+        disk:{freeGiB:m.disk?.state==='ok'?bytesToGiB(m.disk.freeBytes):null,
+          totalGiB:m.disk?.state==='ok'?bytesToGiB(m.disk.totalBytes):null},
+        network:{upAdapterCount:m.network?.state==='ok'?m.network.interfaceCount:null},
+        firewall:{profiles:m.firewall?.state==='ok'?m.firewall.profiles:null},
+        events:{System:{error:null,warning:null},Application:{error:null,warning:null}}};
+      // 0.2.21 reports aggregated events, not System/Application split counts.
+      const allWindowsEvents=m.events?.state==='ok'?m.events:null;
       if(!d.supported){
         for(const ref of Object.values(metricRefs)){
           ref.value.textContent='확인 불가';ref.detail.textContent='Windows에서만 조회할 수 있어요';
@@ -406,9 +425,42 @@ function installNoePrivatePages() {
         ?'Windows 방화벽 프로필: '+profiles.map(p=>({Domain:'도메인',Private:'개인',Public:'공용'})[p.name]+' '+(p.enabled?'켜짐':'꺼짐')).join(' · ')
         :'Windows 방화벽 프로필: 확인 불가 · 접근 제한 또는 조회 실패';
       systemLine.textContent=eventText('System',d.events?.System);
-      appLine.textContent=eventText('Application',d.events?.Application);
-      renderEventBars(d.events);
-      updateWindowsSummary(d.events);
+      appLine.textContent=allWindowsEvents
+        ?'개별 로그별 건수는 제공되지 않습니다 · Windows 합계만 표시'
+        :'Application 오류·경고: 확인 불가';
+      systemLine.textContent=allWindowsEvents
+        ?'최근 24시간 Windows System+Application 합계: 오류 '+allWindowsEvents.errorCount+'건 · 경고 '+allWindowsEvents.warningCount+'건'+(allWindowsEvents.truncated?' · 일부만 집계됨':'')
+        :'Windows 이벤트: 확인 불가 · OS 조회 제한';
+      renderEventBars(null);
+      updateWindowsSummary(null);
+      if(allWindowsEvents){
+        const warning=allWindowsEvents.warningCount,error=allWindowsEvents.errorCount;
+        // The official v0.2.21 API aggregates System + Application; it does
+        // not contain log-specific error/warning numbers.
+        if(typeof eventBars!=='undefined' && Array.isArray(eventBars)){
+          const largest=Math.max(1,warning,error);
+          eventBars.forEach((row,i)=>{
+            const line=row.bar?.parentNode;
+            if(!line)return;
+            if(i>=2){line.hidden=true;return;}
+            const v=i===0?error:warning;
+            const label=i===0?'Windows 전체 · 오류':'Windows 전체 · 경고';
+            line.hidden=false;
+            const labelNode=line.querySelector('.noe-event-name');
+            if(labelNode)labelNode.textContent=label;
+            row.number.textContent=v+'건';
+            row.fill.style.width=(100*v/largest).toFixed(2)+'%';
+            row.bar.classList.remove('noe-bar-unknown');
+            row.bar.setAttribute('aria-label',label+': '+v+'건');
+          });
+        }
+        if(typeof alertRefs!=='undefined' && alertRefs.windows){
+          const windows=alertRefs.windows;
+          windows.card.dataset.tone='observed';
+          windows.chip.textContent=(error+warning)+'건 (24시간)';
+          windows.explain.textContent='Windows 경고·오류 합계'+(allWindowsEvents.truncated?' · 일부만 집계됨':'')+' · 공격 탐지가 아닙니다.';
+        }
+      }
       pcResult.textContent='Windows 로컬 상태 조회 완료 · '+at+' · 위협 여부 판정과 무관';
       pcLoaded=true;
     }catch{
